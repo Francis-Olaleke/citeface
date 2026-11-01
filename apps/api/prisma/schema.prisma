@@ -1,7 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +6,743 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// -----------------------------------------------------
+// ENUMS
+// -----------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum UserRoleType {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum AffiliationType {
+  UNIVERSITY
+  RESEARCH_INSTITUTE
+  COMPANY
+  HOSPITAL
+  GOVERNMENT
+  NON_PROFIT
+  INDEPENDENT
+  OTHER
+}
+
+enum StoryStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  RETRACTED
+}
+
+enum ResearchClassification {
+  PEER_REVIEWED_ARTICLE
+  PREPRINT
+  THESIS_DISSERTATION
+  CONFERENCE_PAPER
+  RESEARCH_REPORT
+  AUTHOR_DESCRIBED_PROJECT
+  PRELIMINARY_UNPUBLISHED
+}
+
+enum StoryAuthorRole {
+  LEAD_AUTHOR
+  CO_AUTHOR
+  CONTRIBUTOR
+  SUPERVISOR
+  ADVISER
+  OTHER
+}
+
+enum SourceType {
+  JOURNAL_ARTICLE
+  PREPRINT
+  BOOK
+  CONFERENCE_PAPER
+  THESIS
+  REPORT
+  WEBSITE
+  DATASET
+  OTHER
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum ReactionType {
+  APPRECIATE
+}
+
+enum ReportTargetType {
+  STORY
+  COMMENT
+  QUESTION
+  USER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationActionType {
+  WARNING
+  CONTENT_HIDDEN
+  CONTENT_RESTORED
+  CONTENT_ARCHIVED
+  ACCOUNT_SUSPENDED
+  ACCOUNT_REINSTATED
+  OTHER
+}
+
+enum CorrectionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationType {
+  NEW_FOLLOWER
+  STORY_APPRECIATED
+  NEW_COMMENT
+  NEW_QUESTION
+  COMMENT_REPLY
+  STORY_CORRECTED
+  STORY_RETRACTED
+  MODERATION_UPDATE
+  SYSTEM
+}
+
+enum ConsentPurpose {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  PRODUCT_ANALYTICS
+  MARKETING
+  RESEARCH_DATA_PROCESSING
+}
+
+// -----------------------------------------------------
+// 1. IDENTITY AND ACCESS
+// -----------------------------------------------------
+
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  email           String     @unique
+  passwordHash    String?
+  displayName     String
+  username        String     @unique
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?  @db.Timestamptz(6)
+  createdAt       DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime   @updatedAt @db.Timestamptz(6)
+  deletedAt       DateTime?  @db.Timestamptz(6)
+
+  roles             UserRole[]
+  sessions          Session[]
+  researcherProfile ResearcherProfile?
+  externalIdentities ExternalIdentity[]
+  affiliations      UserAffiliation[]
+
+  createdStories ResearchStory[] @relation("StoryCreator")
+  storyVersions  StoryVersion[]  @relation("VersionCreator")
+  storyAuthors   StoryAuthor[]   @relation("AuthorAccount")
+
+  following UserFollow[] @relation("UserFollowing")
+  followers UserFollow[] @relation("UserFollowers")
+
+  followedTopics UserTopicFollow[]
+
+  reactions StoryReaction[]
+  comments  Comment[]
+  questions Question[]
+  savedItems SavedItem[]
+  shares    ShareEvent[]
+
+  uploadedMedia MediaAsset[]
+
+  reportsSubmitted ContentReport[] @relation("ReportSubmitter")
+  reportedContent  ContentReport[] @relation("ReportedUser")
+  moderationActions ModerationAction[] @relation("Moderator")
+  correctionsSubmitted Correction[] @relation("CorrectionSubmitter")
+  retractionsInitiated Retraction[] @relation("RetractionInitiator")
+
+  notifications Notification[] @relation("NotificationRecipient")
+  consentRecords ConsentRecord[]
+  productEvents ProductEvent[]
+  auditEvents AuditEvent[] @relation("AuditActor")
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model UserRole {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  role      UserRoleType @default(USER)
+  createdAt DateTime     @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// -----------------------------------------------------
+// 2. RESEARCHER PROFILES AND AFFILIATIONS
+// -----------------------------------------------------
+
+model ResearcherProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  headline    String?
+  biography   String?  @db.Text
+  profileImageUrl String?
+  coverImageUrl   String?
+  country     String?
+  city        String?
+  websiteUrl  String?
+  orcidId     String?  @unique
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([country])
+}
+
+model Affiliation {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String          @unique
+  type        AffiliationType @default(OTHER)
+  description String?         @db.Text
+  websiteUrl  String?
+  country     String?
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+
+  members UserAffiliation[]
+
+  @@index([name])
+  @@index([type])
+}
+
+model UserAffiliation {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  affiliationId  String   @db.Uuid
+  position       String?
+  department     String?
+  isPrimary      Boolean  @default(false)
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  affiliation Affiliation @relation(fields: [affiliationId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, affiliationId])
+  @@index([affiliationId])
+}
+
+model ExternalIdentity {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  provider       String
+  providerUserId String
+  profileUrl     String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+// -----------------------------------------------------
+// 3. RESEARCH STORIES AND PUBLISHING
+// -----------------------------------------------------
+
+model ResearchStory {
+  id               String   @id @default(uuid()) @db.Uuid
+  creatorId        String   @db.Uuid
+  title            String
+  slug             String   @unique
+  summary          String   @db.VarChar(500)
+  researchQuestion String?  @db.Text
+  methodology      String?  @db.Text
+  findings         String?  @db.Text
+  significance     String?  @db.Text
+  limitations      String?  @db.Text
+
+  classification ResearchClassification
+  status         StoryStatus @default(DRAFT)
+
+  publishedAt DateTime? @db.Timestamptz(6)
+  archivedAt  DateTime? @db.Timestamptz(6)
+  retractedAt DateTime? @db.Timestamptz(6)
+  deletedAt   DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  creator User @relation("StoryCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+
+  versions StoryVersion[]
+  authors  StoryAuthor[]
+  sources  StorySource[]
+  media    StoryMedia[]
+  topics   StoryTopic[]
+
+  reactions StoryReaction[]
+  comments  Comment[]
+  questions Question[]
+  savedItems SavedItem[]
+  shares ShareEvent[]
+
+  corrections Correction[]
+  retraction Retraction?
+
+  reports ContentReport[]
+  moderationActions ModerationAction[]
+
+  @@index([creatorId])
+  @@index([status, publishedAt])
+  @@index([classification])
+  @@index([createdAt])
+}
+
+model StoryVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  storyId     String   @db.Uuid
+  versionNumber Int
+  title       String
+  summary     String   @db.VarChar(500)
+  researchQuestion String? @db.Text
+  methodology String?  @db.Text
+  findings    String?  @db.Text
+  significance String? @db.Text
+  limitations String?  @db.Text
+  changeNote  String?  @db.Text
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("VersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([storyId, versionNumber])
+  @@index([createdById])
+}
+
+model StoryAuthor {
+  id              String          @id @default(uuid()) @db.Uuid
+  storyId         String          @db.Uuid
+  userId          String?         @db.Uuid
+  displayName     String
+  email           String?
+  affiliationText String?
+  role            StoryAuthorRole @default(CO_AUTHOR)
+  sortOrder       Int
+  isCorresponding Boolean         @default(false)
+  createdAt       DateTime        @default(now()) @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user User? @relation("AuthorAccount", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([storyId, sortOrder])
+  @@index([userId])
+}
+
+model StorySource {
+  id                String     @id @default(uuid()) @db.Uuid
+  storyId           String     @db.Uuid
+  type              SourceType @default(OTHER)
+  title             String
+  doi               String?
+  url               String?
+  journal           String?
+  publisher         String?
+  publicationDate   DateTime?  @db.Date
+  authorsText       String?    @db.Text
+  metadataImported  Boolean    @default(false)
+  metadataConfirmed Boolean    @default(false)
+  importedMetadata  Json?
+  createdAt         DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime   @updatedAt @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+  @@index([doi])
+}
+
+// -----------------------------------------------------
+// 4. MEDIA
+// -----------------------------------------------------
+
+model MediaAsset {
+  id           String    @id @default(uuid()) @db.Uuid
+  uploadedById String    @db.Uuid
+  type         MediaType
+  storageKey   String    @unique
+  storageProvider String
+  originalName String
+  mimeType     String
+  sizeBytes    BigInt
+  width        Int?
+  height       Int?
+  durationSeconds Int?
+  checksum     String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  deletedAt    DateTime? @db.Timestamptz(6)
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  stories StoryMedia[]
+
+  @@index([uploadedById])
+  @@index([type])
+}
+
+model StoryMedia {
+  id           String   @id @default(uuid()) @db.Uuid
+  storyId      String   @db.Uuid
+  mediaAssetId String   @db.Uuid
+  sortOrder    Int      @default(0)
+  caption      String?  @db.Text
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  media MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+
+  @@unique([storyId, mediaAssetId])
+  @@index([mediaAssetId])
+}
+
+// -----------------------------------------------------
+// 5. TOPICS AND DISCOVERY
+// -----------------------------------------------------
+
+model Topic {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  stories StoryTopic[]
+  followers UserTopicFollow[]
+
+  @@index([name])
+}
+
+model StoryTopic {
+  id        String   @id @default(uuid()) @db.Uuid
+  storyId   String   @db.Uuid
+  topicId   String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@unique([storyId, topicId])
+  @@index([topicId])
+}
+
+model UserFollow {
+  id          String   @id @default(uuid()) @db.Uuid
+  followerId  String   @db.Uuid
+  followedId  String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  follower User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("UserFollowers", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followedId])
+}
+
+model UserTopicFollow {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  topicId   String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([topicId])
+}
+
+// -----------------------------------------------------
+// 6. ENGAGEMENT
+// -----------------------------------------------------
+
+model StoryReaction {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  storyId   String       @db.Uuid
+  type      ReactionType @default(APPRECIATE)
+  createdAt DateTime     @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId, type])
+  @@index([storyId])
+}
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  storyId   String   @db.Uuid
+  authorId  String   @db.Uuid
+  parentId  String?  @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  deletedAt DateTime? @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  parent Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies Comment[] @relation("CommentReplies")
+
+  reports ContentReport[]
+
+  @@index([storyId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model Question {
+  id        String   @id @default(uuid()) @db.Uuid
+  storyId   String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  deletedAt DateTime? @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  reports ContentReport[]
+
+  @@index([storyId, createdAt])
+  @@index([authorId])
+}
+
+model SavedItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  storyId   String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@index([storyId])
+}
+
+model ShareEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  storyId   String   @db.Uuid
+  platform  String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId, createdAt])
+}
+
+// -----------------------------------------------------
+// 7. NOTIFICATIONS
+// -----------------------------------------------------
+
+model Notification {
+  id          String           @id @default(uuid()) @db.Uuid
+  recipientId String           @db.Uuid
+  type        NotificationType
+  title       String
+  body        String?          @db.Text
+  resourceType String?
+  resourceId  String?          @db.Uuid
+  readAt      DateTime?        @db.Timestamptz(6)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+
+  recipient User @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt])
+}
+
+model NotificationDelivery {
+  id             String   @id @default(uuid()) @db.Uuid
+  notificationId String   @db.Uuid
+  channel        String
+  status         String
+  deliveredAt    DateTime? @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+}
+
+// -----------------------------------------------------
+// 8. TRUST, MODERATION AND RESEARCH INTEGRITY
+// -----------------------------------------------------
+
+model ContentReport {
+  id          String           @id @default(uuid()) @db.Uuid
+  reporterId  String           @db.Uuid
+  targetType  ReportTargetType
+  storyId     String?          @db.Uuid
+  commentId   String?          @db.Uuid
+  questionId  String?          @db.Uuid
+  reportedUserId String?       @db.Uuid
+  reason      String
+  details     String?          @db.Text
+  status      ReportStatus    @default(PENDING)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @db.Timestamptz(6)
+
+  reporter       User            @relation("ReportSubmitter", fields: [reporterId], references: [id], onDelete: Restrict)
+  reportedUser   User?           @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  story          ResearchStory?  @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  comment        Comment?        @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  question       Question?       @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  moderationActions ModerationAction[] @relation("ReportModerationActions")
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([storyId])
+  @@index([commentId])
+  @@index([questionId])
+}
+
+model ModerationAction {
+  id          String               @id @default(uuid()) @db.Uuid
+  moderatorId String               @db.Uuid
+  storyId     String?              @db.Uuid
+  reportId    String?              @db.Uuid
+  action      ModerationActionType
+  reason      String?              @db.Text
+  createdAt   DateTime             @default(now()) @db.Timestamptz(6)
+
+  moderator User @relation("Moderator", fields: [moderatorId], references: [id], onDelete: Restrict)
+  story     ResearchStory? @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  report    ContentReport? @relation("ReportModerationActions", fields: [reportId], references: [id], onDelete: Restrict)
+
+  @@index([moderatorId, createdAt])
+  @@index([storyId])
+  @@index([reportId])
+}
+
+model Correction {
+  id          String           @id @default(uuid()) @db.Uuid
+  storyId     String           @db.Uuid
+  submittedById String         @db.Uuid
+  description String           @db.Text
+  status      CorrectionStatus @default(SUBMITTED)
+  resolutionNote String?       @db.Text
+  resolvedAt  DateTime?        @db.Timestamptz(6)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  submittedBy User @relation("CorrectionSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+
+  @@index([storyId, createdAt])
+  @@index([status])
+}
+
+model Retraction {
+  id          String   @id @default(uuid()) @db.Uuid
+  storyId     String   @unique @db.Uuid
+  initiatedById String @db.Uuid
+  reason      String   @db.Text
+  notice      String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  initiatedBy User @relation("RetractionInitiator", fields: [initiatedById], references: [id], onDelete: Restrict)
+}
+
+// -----------------------------------------------------
+// 9. PRIVACY, AUDIT AND ANALYTICS
+// -----------------------------------------------------
+
+model ConsentRecord {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  purpose       ConsentPurpose
+  granted       Boolean
+  policyVersion String
+  recordedAt    DateTime       @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, recordedAt])
+}
+
+model ProductEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  eventName  String
+  properties Json?
+  occurredAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventName, occurredAt])
+  @@index([userId, occurredAt])
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
 }
