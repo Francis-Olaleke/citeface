@@ -1,133 +1,716 @@
-# Citeface Publishing — Acceptance Criteria
+# Citeface Publishing Acceptance Criteria
 
-These criteria are intended to be testable. They should become automated tests where practical.
+**Document status:** Product acceptance criteria  
+**Version:** 2.0  
+**Last updated:** 4 November 2026  
+**Product:** Citeface
 
-## 1. Content type selection
+---
 
-**PUB-AC-001**
-- Given an authenticated user opens the publishing experience,
-- when they start a post,
-- then they can select research story, video, photo, paper announcement or methods post.
+## 1. Purpose
 
-**PUB-AC-002**
-- Given a content type is selected,
-- when the publishing form is displayed,
-- then the form presents fields appropriate to that type and does not require irrelevant fields.
+This document defines the acceptance criteria for Citeface publishing functionality.
 
-## 2. Optional source information
+It establishes the conditions that must be satisfied before publishing features can be considered complete and ready for release.
 
-**PUB-AC-003**
-- Given an author creates any supported post type,
-- when no DOI or original-paper URL is supplied,
-- then the post may still be submitted if its other required fields are valid.
+The criteria cover:
+- Content creation.
+- Five supported content types.
+- Private saved drafts.
+- Publication and audience control.
+- Media uploads and processing.
+- Authorship and research provenance.
+- Published-content management.
+- Corrections and retractions.
+- Reporting and moderation.
+- Security, privacy, and reliability.
 
-**PUB-AC-004**
-- Given an author supplies a DOI or source URL,
-- when the post is saved,
-- then the supplied source information is associated with that post and displayed to readers according to visibility permissions.
+## 2. Priority definitions
 
-**PUB-AC-005**
-- Given a post includes a DOI,
-- then the interface must not automatically label the post or its claims as verified or peer-reviewed solely because a DOI exists.
+| Priority | Meaning |
+|---|---|
+| P0 | Required for the first MVP release |
+| P1 | Important follow-up |
+| P2 | Later enhancement |
+| Out of scope | Not required for the initial MVP |
 
-## 3. Audience selection and authorization
+## 3. Content type acceptance criteria
 
-**PUB-AC-006**
-- Given an author creates a post,
-- when they reach the publication step,
-- then they must explicitly select an audience from the configured audience options.
+### PUB-AC-001 — Supported content types
 
-**PUB-AC-007**
-- Given a post has an audience restriction,
-- when a user requests it through the feed, profile, search, direct URL or API,
-- then the server returns the content only if that user is authorized to view it.
+**Priority:** P0
 
-**PUB-AC-008**
-- Given an unauthorized user requests a restricted post,
-- then the response must not disclose the post body, private media URL or other protected metadata.
+**Given** an authenticated user opens the publishing interface,
 
-## 4. Video validation
+**When** the user selects a content type,
 
-**PUB-AC-009**
-- Given a video has a trusted measured duration of 90 seconds,
-- when it passes all other validations,
-- then it is eligible for publication.
+**Then** the system must support:
+- STORY
+- VIDEO
+- PHOTO
+- PAPER
+- METHODS
 
-**PUB-AC-010**
-- Given a video has a trusted measured duration of 300 seconds,
-- when it passes all other validations,
-- then it is eligible for publication.
+**Verification:**
+- Confirm all five types are available.
+- Confirm the selected type is stored correctly.
+- Confirm the appropriate content fields are displayed.
+- Confirm invalid or unsupported content types are rejected by the server.
 
-**PUB-AC-011**
-- Given a video is shorter than 90 seconds or longer than 300 seconds,
-- when the server validates it,
-- then publication is rejected with a clear, actionable error.
+### PUB-AC-002 — Story publishing
 
-**PUB-AC-012**
-- Given a browser reports a duration within the allowed range but trusted server/provider metadata reports a duration outside it,
-- then the server/provider result takes precedence and publication is rejected.
+**Priority:** P0
 
-**PUB-AC-013**
-- Given an upload fails or media processing fails,
-- then the post is not published and the author receives a useful failure state and retry guidance.
+**Given** a user creates a STORY,
 
-**PUB-AC-014**
-- Given a video has not completed required storage and validation,
-- then it must not be available as a published feed item.
+**When** the user submits valid required content,
 
-## 5. Photo and file validation
+**Then** the system must publish the story successfully.
 
-**PUB-AC-015**
-- Given an uploaded file has an unsupported type or exceeds the configured size limit,
-- then the upload is rejected before publication.
+**Verification:**
+- Required title and body validation works.
+- Optional source and DOI fields are accepted.
+- Topics or disciplines can be associated with the post.
+- The authenticated author is correctly recorded.
+- Published content displays correctly.
 
-**PUB-AC-016**
-- Given a user uploads media,
-- then the publishing flow presents the required rights/permission confirmation.
+### PUB-AC-003 — Video publishing
 
-## 6. No-drafts policy
+**Priority:** P0
 
-**PUB-AC-017**
-- Given a user starts creating a post,
-- then the MVP does not offer a save-draft action or a drafts area.
+**Given** a user selects VIDEO,
 
-**PUB-AC-018**
-- Given a media upload is in progress,
-- then its technical upload state is not exposed as a user-editable saved draft.
+**When** the user uploads a valid video,
 
-## 7. Author identity and research context
+**Then** the system must validate and process the video before publication.
 
-**PUB-AC-019**
-- Given a post is published,
-- then the post is associated with its author and content type.
+**Verification:**
+- Supported formats are accepted.
+- Unsupported formats are rejected.
+- Actual video duration is validated using trusted media metadata or processing.
+- The minimum duration is 90 seconds.
+- The maximum duration is 300 seconds.
+- Videos of exactly 90 and 300 seconds are accepted.
+- Videos shorter than 90 seconds or longer than 300 seconds are rejected.
+- Processing failure prevents publication.
+- Successful videos are playable after publication.
 
-**PUB-AC-020**
-- Given source or publication-status information is supplied,
-- then it is displayed without implying that Citeface has independently validated the underlying scientific claims.
+### PUB-AC-004 — Image publishing
 
-## 8. Edit, remove and report
+**Priority:** P0
 
-**PUB-AC-021**
-- Given an author attempts to edit or remove a post,
-- then the server verifies ownership or an explicitly authorized moderation role.
+**Given** a user selects PHOTO,
 
-**PUB-AC-022**
-- Given a reader reports a post,
-- then a report record is created and made available to the authorized moderation workflow.
+**When** the user uploads valid research images,
 
-## 9. Cross-cutting quality criteria
+**Then** the system must validate and associate those images with the post.
 
-**PUB-AC-023**
-- Publishing and media APIs validate input on the server, not only in the browser.
+**Verification:**
+- Supported image formats are accepted.
+- Unsupported formats are rejected.
+- File-size limits are enforced.
+- File integrity is checked.
+- The configured maximum image count is enforced.
+- Images display correctly on mobile and desktop.
+- Unpublished images remain private.
 
-**PUB-AC-024**
-- Repeated client submissions or retries do not create unintended duplicate posts or duplicate media associations.
+### PUB-AC-005 — Paper announcement publishing
 
-**PUB-AC-025**
-- Media storage credentials and private storage keys are never exposed to unauthorized clients.
+**Priority:** P0
 
-**PUB-AC-026**
-- Publishing forms and playback controls work at supported mobile and desktop viewport sizes.
+**Given** a user selects PAPER,
 
-**PUB-AC-027**
-- Automated tests cover valid inputs, invalid inputs, permission boundaries, upload failures and retry behavior.
+**When** the user supplies the required paper information,
+
+**Then** the system must publish the announcement with its relevant metadata.
+
+**Verification:**
+- Paper title and description are validated.
+- DOI is optional.
+- External URL is optional.
+- Contributor information can be recorded.
+- The interface does not imply that a DOI proves peer review or scientific validity.
+
+### PUB-AC-006 — Methods publishing
+
+**Priority:** P0
+
+**Given** a user selects METHODS,
+
+**When** the user supplies valid method information,
+
+**Then** the system must publish the method content.
+
+**Verification:**
+- Required title and method description are validated.
+- Topics or disciplines can be associated.
+- Source or DOI information is optional.
+- Author and contributor information is preserved.
+
+## 4. Private saved draft acceptance criteria
+
+### PUB-AC-007 — Create and save a draft
+
+**Priority:** P0
+
+**Given** an authenticated user creates research content,
+
+**When** the user chooses to save it as a draft,
+
+**Then** the system must persist the content as a private unpublished draft.
+
+**Verification:**
+- A draft can be saved without publication.
+- A draft may be incomplete.
+- The draft is associated with the authenticated user.
+- The draft receives a unique identifier.
+- The draft publication state is DRAFT.
+- Saving does not create a public post.
+- The draft remains available after the user signs out and signs back in.
+
+### PUB-AC-008 — Retrieve and reopen a draft
+
+**Priority:** P0
+
+**Given** an authenticated user has saved drafts,
+
+**When** the user opens their draft collection,
+
+**Then** the system must return only drafts the user is authorized to access.
+
+**Verification:**
+- The owner can retrieve their drafts.
+- The owner can reopen a draft.
+- Draft content and metadata are restored correctly.
+- Drafts persist across sessions and devices.
+- Another user cannot retrieve the draft by guessing or changing its identifier.
+- Unauthorized direct API requests are rejected.
+
+### PUB-AC-009 — Update a draft
+
+**Priority:** P0
+
+**Given** a user owns a saved draft,
+
+**When** the user changes its content and saves the update,
+
+**Then** the system must persist the changes without publishing the draft.
+
+**Verification:**
+- The owner can update the draft.
+- Updated fields persist.
+- The publication state remains DRAFT.
+- Ownership cannot be changed through an ordinary update request.
+- Incomplete drafts remain saveable.
+- Unauthorized update attempts are rejected.
+
+### PUB-AC-010 — Delete a draft
+
+**Priority:** P0
+
+**Given** a user owns a saved draft,
+
+**When** the user requests deletion,
+
+**Then** the system must remove that draft from normal draft access.
+
+**Verification:**
+- The owner can delete the draft.
+- Another user cannot delete it.
+- Deleted drafts cannot be retrieved through normal draft endpoints.
+- Associated media is handled according to the approved cleanup policy.
+- Deletion does not accidentally affect another user's media or posts.
+
+### PUB-AC-011 — Publish a saved draft
+
+**Priority:** P0
+
+**Given** a user owns a saved draft,
+
+**When** the user attempts to publish it,
+
+**Then** the system must validate all publication requirements before changing its state to PUBLISHED.
+
+**Verification:**
+- Draft ownership is verified server-side.
+- Required content fields are complete.
+- Content type is valid.
+- Audience selection is valid.
+- Contributor and rights requirements are satisfied.
+- Required media is READY.
+- Video duration is valid where applicable.
+- Successful publication changes the publication state to PUBLISHED.
+- Failed validation leaves the draft intact.
+- No partially published post is created.
+- Repeated publication requests do not create duplicate posts.
+- Published content follows its selected audience restrictions.
+
+### PUB-AC-012 — Draft privacy
+
+**Priority:** P0
+
+**Given** a user has an unpublished draft,
+
+**When** another user or an unauthorized service attempts to discover or access it,
+
+**Then** the system must deny access.
+
+**Verification:**
+- Drafts do not appear in public feeds.
+- Drafts do not appear in member feeds.
+- Drafts do not appear on researcher profiles.
+- Drafts do not appear in search results.
+- Drafts do not appear in recommendations.
+- Drafts are excluded from public sharing pages.
+- Unauthorized API requests cannot retrieve draft content.
+- Draft media cannot be accessed through unauthorized URLs.
+- Draft content is not accidentally included in public notifications.
+- Server-side authorization is enforced independently of frontend visibility.
+
+### PUB-AC-013 — Draft media failure and recovery
+
+**Priority:** P0
+
+**Given** a user has attached media to a draft,
+
+**When** upload or processing fails,
+
+**Then** the draft must remain available and unpublished.
+
+**Verification:**
+- Media failure does not delete the draft.
+- The user receives an actionable error.
+- The user can retry the upload.
+- The user can remove failed media.
+- The system does not silently publish the post.
+- Media access remains private until publication and authorization.
+
+## 5. Audience and access-control acceptance criteria
+
+### PUB-AC-014 — Audience selection
+
+**Priority:** P0
+
+**Given** an author is preparing a post for publication,
+
+**When** the author selects an audience,
+
+**Then** the system must store the selected audience and enforce its permissions.
+
+**Verification:**
+- The interface displays the approved audience options.
+- The server validates the selected audience.
+- The audience is stored correctly.
+- The selected audience is respected by all relevant read endpoints.
+- Draft privacy is independent of published-content audience selection.
+
+**Note:** Exact audience labels and access semantics remain subject to product approval.
+
+### PUB-AC-015 — Published-content access enforcement
+
+**Priority:** P0
+
+**Given** a published post has an audience restriction,
+
+**When** a user requests that post through any supported access path,
+
+**Then** the server must verify the user's authorization before returning protected content.
+
+**Verification:**
+- Feed access is enforced.
+- Profile access is enforced.
+- Search access is enforced.
+- Direct post requests are enforced.
+- API access is enforced.
+- Recommendation access is enforced.
+- Media delivery access is enforced.
+- Changing a post identifier does not bypass authorization.
+- Unauthorized requests do not reveal restricted content or sensitive metadata.
+
+## 6. Authorship and research integrity acceptance criteria
+
+### PUB-AC-016 — Author identity
+
+**Priority:** P0
+
+**Given** an authenticated user publishes a post,
+
+**When** the post is stored,
+
+**Then** the system must associate it with the authenticated author.
+
+**Verification:**
+- Author identity is derived from the authenticated session.
+- A client cannot assign another user as the author through an ordinary publishing request.
+- Published content displays the correct author.
+- Unauthorized impersonation attempts are rejected.
+
+### PUB-AC-017 — Contributor information
+
+**Priority:** P0
+
+**Given** an author supplies contributor details,
+
+**When** the post is saved or published,
+
+**Then** the system must preserve contributor names, order, and roles where supplied.
+
+**Verification:**
+- Contributor records are associated with the correct post.
+- Contributor order is preserved.
+- Contributor roles are preserved where supplied.
+- The publishing user confirms authority to list contributors.
+- Formal co-author approval is not required for the initial MVP.
+
+### PUB-AC-018 — DOI and source metadata
+
+**Priority:** P0
+
+**Given** a user supplies a DOI or external source,
+
+**When** the system stores or displays the information,
+
+**Then** it must distinguish supplied or imported metadata from verified information.
+
+**Verification:**
+- DOI may be omitted.
+- External URL may be omitted.
+- Imported metadata requires author confirmation.
+- DOI presence does not automatically mark a post as peer-reviewed.
+- The platform does not imply scientific correctness based on a DOI.
+- A Citeface post is distinguishable from a formal external publication.
+
+### PUB-AC-019 — Rights and permissions confirmation
+
+**Priority:** P0
+
+**Given** a user is publishing content,
+
+**When** the user submits the publication request,
+
+**Then** the system must require the appropriate rights and permissions confirmation.
+
+**Verification:**
+- The confirmation is presented clearly.
+- Publication is blocked until required confirmation is supplied.
+- The confirmation is recorded.
+- The system provides a reporting route for suspected rights violations.
+
+## 7. Media-processing acceptance criteria
+
+### PUB-AC-020 — Media state management
+
+**Priority:** P0
+
+**Given** media is uploaded,
+
+**When** it moves through the processing lifecycle,
+
+**Then** the system must maintain a distinct technical state for the media asset.
+
+**Verification:**
+- PENDING_UPLOAD is represented correctly.
+- UPLOADING is represented correctly.
+- PROCESSING is represented correctly.
+- READY is represented correctly.
+- FAILED is represented correctly.
+- Media state is separate from the post publication state.
+- A draft may contain media in any applicable technical state.
+- Required media must be READY before publication.
+
+### PUB-AC-021 — Secure media storage and delivery
+
+**Priority:** P0
+
+**Given** a user uploads media,
+
+**When** the system stores or delivers it,
+
+**Then** the system must enforce the relevant privacy and access rules.
+
+**Verification:**
+- Storage credentials are not exposed to clients.
+- Unpublished media is private.
+- Published media is accessible only according to the post's audience.
+- Unauthorized media requests are denied.
+- File type and size are validated server-side.
+- Media processing failures are handled safely.
+- Public media delivery does not expose internal storage infrastructure.
+
+## 8. Published-content management acceptance criteria
+
+### PUB-AC-022 — Edit a published post
+
+**Priority:** P0
+
+**Given** a published post exists,
+
+**When** its author or an authorized system role edits it,
+
+**Then** the system must validate and persist the changes.
+
+**Verification:**
+- The author can edit their own post.
+- Unauthorized users cannot edit the post.
+- Updated content is stored correctly.
+- Relevant change history is retained.
+- Invalid updates are rejected.
+
+### PUB-AC-023 — Remove or archive a published post
+
+**Priority:** P0
+
+**Given** a published post exists,
+
+**When** an authorized user removes or archives it,
+
+**Then** it must be excluded from normal public discovery while appropriate records are retained.
+
+**Verification:**
+- Only authorized actors can remove or archive the post.
+- The post is removed from normal discovery.
+- Appropriate audit history is preserved.
+- Removal is distinguishable from retraction.
+- Unauthorized requests are rejected.
+
+### PUB-AC-024 — Visible corrections
+
+**Priority:** P0
+
+**Given** a published post requires correction,
+
+**When** an authorized actor issues a correction,
+
+**Then** readers must be able to identify that a correction occurred.
+
+**Verification:**
+- Correction information is stored.
+- The correction is visible to readers.
+- Correction date and responsible actor are recorded.
+- Relevant historical information is preserved.
+- A correction is distinguishable from an ordinary edit.
+
+### PUB-AC-025 — Visible retractions
+
+**Priority:** P0
+
+**Given** a post must be retracted,
+
+**When** an authorized actor records the retraction,
+
+**Then** the system must display a distinct retracted status and preserve appropriate history.
+
+**Verification:**
+- Retraction is distinguishable from removal or archiving.
+- An explanation or reason can be recorded.
+- Retraction history is preserved.
+- Readers can identify the retracted status.
+- External paper retractions are distinguishable from retractions of Citeface posts.
+- External retraction claims require an appropriate source or confirmation.
+
+## 9. Reporting and moderation acceptance criteria
+
+### PUB-AC-026 — Report a post
+
+**Priority:** P0
+
+**Given** a user identifies potentially problematic content,
+
+**When** the user submits a report,
+
+**Then** the system must record the report for authorized review.
+
+**Verification:**
+- The report references the correct post.
+- The reporting user is recorded.
+- A report reason or category is captured.
+- Unauthorized users cannot access private report records.
+- A report is not automatically treated as proof of wrongdoing.
+
+### PUB-AC-027 — Review a report
+
+**Priority:** P0
+
+**Given** a report exists,
+
+**When** an authorized moderator reviews it,
+
+**Then** the system must permit appropriate moderation action.
+
+**Verification:**
+- Only authorized moderators can access moderation records.
+- Actions are recorded.
+- Unauthorized moderation actions are rejected.
+- Sensitive moderation information is not exposed publicly.
+
+## 10. Reliability and usability acceptance criteria
+
+### PUB-AC-028 — Preserve user work during errors
+
+**Priority:** P0
+
+**Given** a user is creating or editing content,
+
+**When** a network, server, or media operation fails,
+
+**Then** the system must avoid unnecessary loss of valid user work.
+
+**Verification:**
+- Failed requests display understandable errors.
+- Failed publication does not destroy the draft.
+- Media failure does not destroy the draft.
+- Retrying an operation does not create unintended duplicate posts.
+- Sensitive internal details are not exposed in error messages.
+
+### PUB-AC-029 — Responsive publishing experience
+
+**Priority:** P0
+
+**Given** a user accesses the publishing experience from a supported device,
+
+**When** the user creates, edits, saves, or publishes content,
+
+**Then** the interface must remain usable and understandable.
+
+**Verification:**
+- Forms work on supported desktop browsers.
+- Forms work on supported mobile browsers.
+- Upload progress and failure messages are understandable.
+- Validation messages identify the relevant problem.
+- Users can access their saved drafts.
+- Media previews display appropriately.
+
+## 11. Security and privacy acceptance criteria
+
+### PUB-AC-030 — Authentication and authorization
+
+**Priority:** P0
+
+**Given** a publishing or draft-management request is received,
+
+**When** the server processes the request,
+
+**Then** it must verify authentication and the required authorization.
+
+**Verification:**
+- Unauthenticated users cannot create, edit, delete, or publish private drafts.
+- Users cannot modify another user's draft.
+- Users cannot publish another user's draft.
+- Users cannot edit or remove another user's post without an authorized role.
+- Privileged operations require explicit authorization.
+- Access control is enforced server-side.
+
+### PUB-AC-031 — Input validation and safe content rendering
+
+**Priority:** P0
+
+**Given** a user submits content,
+
+**When** the server validates and stores it,
+
+**Then** invalid or unsafe input must be handled securely.
+
+**Verification:**
+- Required fields are validated server-side.
+- Content-type constraints are enforced.
+- Input is handled safely.
+- Output rendering prevents script injection.
+- Database operations use safe parameterized access through the chosen data layer.
+- Error messages do not expose internal implementation details.
+
+### PUB-AC-032 — Secrets and sensitive data protection
+
+**Priority:** P0
+
+**Given** publishing or media operations require credentials or sensitive information,
+
+**When** the application processes them,
+
+**Then** secrets and sensitive information must remain protected.
+
+**Verification:**
+- Storage credentials are not exposed to the browser.
+- Authentication tokens and passwords are not logged.
+- Private drafts are not included in public logs or analytics.
+- Sensitive moderation records are access-controlled.
+- Environment secrets are not committed to source control.
+
+## 12. Testing requirements
+
+The implementation must include automated tests for the relevant acceptance criteria.
+
+At minimum, the test suite should cover:
+
+### 12.1 Unit tests
+- Content-type validation.
+- Required-field validation.
+- Video duration validation.
+- Audience validation.
+- Draft-state validation.
+- Media-state validation.
+- Publication readiness checks.
+- Contributor and rights-confirmation validation.
+
+### 12.2 API and integration tests
+- Draft creation.
+- Draft retrieval.
+- Draft updating.
+- Draft deletion.
+- Draft publication.
+- Draft ownership enforcement.
+- Draft privacy.
+- Audience access control.
+- Media upload and processing failure.
+- Published-content editing.
+- Removal and archival.
+- Corrections and retractions.
+- Reporting and moderation authorization.
+
+### 12.3 End-to-end tests
+- Register and authenticate.
+- Create and save an incomplete draft.
+- Sign out and sign back in.
+- Reopen the draft.
+- Edit and resave it.
+- Attempt unauthorized access from another account.
+- Confirm the draft is not visible publicly.
+- Complete required fields.
+- Publish successfully.
+- Confirm the published post follows its selected audience.
+- Confirm invalid media prevents publication.
+- Confirm correction and retraction status is visible.
+
+## 13. MVP release gate
+
+Publishing is ready for the first MVP release only when:
+
+1. All P0 publishing stories have been implemented.
+2. All P0 acceptance criteria have been tested.
+3. Draft ownership and privacy are enforced server-side.
+4. Published-content audience restrictions are enforced server-side.
+5. Required media validation works.
+6. Failed publication does not destroy drafts.
+7. Published-content editing and removal work correctly.
+8. Basic visible corrections and retractions work.
+9. Reporting and basic moderation authorization work.
+10. Security and regression tests pass.
+11. The publishing experience works on supported desktop and mobile browsers.
+12. No known critical privacy or authorization vulnerability remains.
+
+A feature must not be marked complete merely because its interface exists. Its server behaviour, persistence, authorization, failure handling, and tests must also satisfy the applicable criteria.
+
+## 14. Relationship to other Citeface documents
+
+This document must remain consistent with:
+
+- `citeface-product-strategy-requirements-roadmap.md`
+- `design-reference-and-product-architecture.md`
+- `publishing-specification.md`
+- `publishing-user-stories.md`
+- `ADR-0001-publishing-rules.md`
+- `publishing-data-model.md`
+- `citeface-mvp-specification.md`
+
+Changes to accepted product decisions must be reflected across the relevant documentation and decision records.
+
+**Controlling draft decision:** Basic private saved drafts are included in the first Citeface MVP, as accepted on 4 November 2026.
