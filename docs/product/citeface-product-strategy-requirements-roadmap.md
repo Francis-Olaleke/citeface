@@ -139,8 +139,8 @@ Future modules include opportunities, institutions/labs, advanced networking, an
 - **FR-03 Profiles:** Users can create and update profiles; optional personal information is not unnecessarily compulsory.
 - **FR-04 Story creation:** Authenticated users can create research stories.
 - **FR-05 Media upload:** Supported short videos and images can be uploaded with file-type and size validation.
-- **FR-06 Drafts:** Authenticated users can create, save, reopen, edit, update, delete and publish their own private drafts. Drafts persist across sessions and devices, remain inaccessible to unauthorized users, and are excluded from public feeds, profiles, search, recommendations, APIs and unauthorized media access.
-- **FR-07 Publication:** Users can publish completed stories after server-side validation. Published stories are accessible according to the author's selected audience and the platform's access-control rules.
+- **FR-06 Drafts:** Authenticated users can create, save, reopen, edit, update, delete and publish their own drafts. Drafts persist across sessions and devices and are accessible only to their authors. Drafts must remain private regardless of their intended publication audience and must be excluded from feeds, profiles, search, recommendations, notifications and unauthorized API or media access. Server-side ownership authorization is required for every draft operation.
+- **FR-07 Publication:** Authenticated users can publish completed stories after server-side validation. Every new story defaults to the PUBLIC audience. Authors can select PUBLIC, MEMBERS or FOLLOWERS before publication and can change the audience of their published stories. PUBLIC stories are accessible to everyone, including signed-out visitors. MEMBERS stories are accessible only to authenticated Citeface users. FOLLOWERS stories are accessible only to authenticated users who follow the author. Audience permissions must be enforced server-side across all relevant access paths.
 - **FR-08 Attribution:** Publisher attests authority to list contributors; contributor names, order and roles are recorded.
 - **FR-09 Feed:** Users can discover published stories in a feed supporting video and image-slide formats.
 - **FR-10 Story detail:** Story details include content, contributors, sources and status.
@@ -150,21 +150,24 @@ Future modules include opportunities, institutions/labs, advanced networking, an
 - **FR-14 Discussion:** Users can ask questions and comment.
 - **FR-15 Saves:** Users can save/unsave stories.
 - **FR-16 Search:** Users can search stories and researcher profiles.
-- **FR-17 Sharing:** Users can share public stories.
+- **FR-17 Sharing:** Users can share stories through appropriate in-platform and external sharing mechanisms. Public stories can be shared with anyone, including signed-out visitors. Sharing a restricted story must never bypass its audience permissions. Shared links, previews and media must preserve the story's current access rules.
 - **FR-18 Notifications:** Users receive relevant interaction and followed-content notifications.
 - **FR-19 Reporting:** Users can report content and suspicious behaviour.
 - **FR-20 Moderation:** Authorised moderators can review reports and take actions.
 - **FR-21 Corrections/retractions:** Stories support visible correction and retraction workflows.
 - **FR-22 Analytics:** Essential product and operational events are captured.
 - **FR-23 Administration:** Authorised administrators can manage accounts and moderation.
+- **FR-24 Audience management:** Authors can review and change the audience of their published stories. Audience changes must be authorized, validated, immediately enforced across all access paths and recorded in the audit history. Unfollowing an author must immediately revoke access to that author's FOLLOWERS stories.
 
 ## 9. Non-functional requirements
 
 ### Security
 Secure password hashing, session management, server-side authorisation, input validation, common web vulnerability protections, upload validation, secrets management and administrative access controls.
 
+Audience-based authorization must be enforced server-side for feeds, profiles, story details, search, recommendations, direct links, APIs, notifications, media delivery and caches. Frontend visibility controls alone are insufficient.
+
 ### Privacy
-Private drafts, clear public/private boundaries, minimal personal-data collection, transparent policies, appropriate consent, confidentiality protections and documented retention/deletion processes.
+Protect unpublished drafts through strict author-only access. Enforce PUBLIC, MEMBERS and FOLLOWERS visibility rules for published stories. Prevent unauthorized access and information leakage through APIs, database queries, search indexes, previews, notifications, media URLs, storage and caches. Apply appropriate consent, data-minimization, confidentiality and retention/deletion protections.
 
 ### Performance
 Responsive feed loading, optimised images, controlled video delivery, pagination, efficient queries and caching only where justified.
@@ -190,6 +193,14 @@ Start with a modular monolith and relational database. Introduce distributed ser
 - Users must have rights or permissions for uploaded material; provide reporting/takedown procedures.
 - Verification is not scientific validation.
 - Do not send confidential or unpublished research to external AI providers without an explicit permission framework and reviewed privacy/security basis.
+- Published stories support three audiences: PUBLIC, MEMBERS and FOLLOWERS. PUBLIC is the default.
+- PUBLIC stories are accessible to everyone, including signed-out visitors.
+- MEMBERS stories require an authenticated Citeface account.
+- FOLLOWERS stories require an authenticated user with an active follow relationship with the author.
+- Authors may change the audience of their published stories. Changes must take effect immediately and be recorded in the audit history.
+- Audience restrictions apply to story content, media, previews, notifications, search results, feeds, profiles and shared links.
+- Authors retain access to their own published stories regardless of audience.
+- Unfollowing an author immediately revokes access to that author's FOLLOWERS stories.
 
 Citeface must distinguish corrections and retractions of content published on Citeface from corrections and retractions of external research papers referenced by Citeface posts.
 
@@ -210,6 +221,8 @@ The MVP is the smallest credible version that delivers the core promise. It must
 - Short-video upload and playback.
 - Image upload and image-slide stories.
 - Categories, contributors, sources and status labels.
+- Audience selection for published stories, with PUBLIC as the default and MEMBERS and FOLLOWERS as additional options.
+- Audience changes for published stories, including immediate authorization updates and audit history.
 
 **Discovery**
 - Central feed with video-first presentation.
@@ -225,6 +238,10 @@ The MVP is the smallest credible version that delivers the core promise. It must
 **Trust and operations**
 - Private drafts, status/provenance, reporting, basic moderation, correction/retraction handling, audit history, essential analytics, monitoring, backups and security tests.
 - Server-side draft ownership enforcement, private draft persistence, secure unpublished-media access, and tests confirming that unauthorized users cannot retrieve, modify, publish or delete another user's drafts.
+- Server-side audience authorization across feeds, profiles, story details, search, recommendations, APIs, notifications, shared links and media delivery.
+- Tests confirming that signed-out visitors can access PUBLIC stories, authenticated members can access MEMBERS stories, and only active followers can access FOLLOWERS stories.
+- Tests confirming that audience changes and unfollowing immediately revoke access where required.
+- Tests confirming that drafts and their media remain accessible only to their authors.
 
 ### Explicitly deferred
 AI recommendation engines, semantic search, AI assistants, automated collaboration matching, DMs/group chats, complex reputation/gamification, institutional analytics, native apps, large-scale streaming infrastructure, advanced citation networks, paid subscriptions and extensive recruitment/opportunity systems.
@@ -234,8 +251,11 @@ AI recommendation engines, semantic search, AI assistants, automated collaborati
 ### Reader
 Register or browse → select interests → discover video/slide story → open story and sources → appreciate/save/comment → follow researcher/topic → return.
 
-### Contributor
-Register → create profile → create story → add video or slides → add title, explanation, category, sources, status and contributor details → preview → save draft or publish → respond to engagement.
+**### Contributor
+Register → create profile → create story → add video or slides → add title, explanation, category, sources, status and contributor details → preview → select publication audience (PUBLIC, MEMBERS or FOLLOWERS) → save draft or publish → respond to engagement.
+
+**### Returning member
+Log in → discover stories from followed researchers and topics → explore content available to their account → revisit saved stories → participate in discussions → receive relevant notifications → return for new research and conversations.
 
 ### Researcher discovery
 Search topic → discover stories/researchers → inspect profile → follow → save relevant stories → participate in discussions → build relationships.
@@ -243,6 +263,7 @@ Search topic → discover stories/researchers → inspect profile → follow →
 ## 13. Master roadmap
 
 Timelines are estimates, not commitments. Each phase has an evidence-based exit gate.
+The audience feature must be included in the actual development and testing plan, not left as an implied requirement.
 
 ### Phase 0 — Product foundation
 Finalise vision, users, initial communities, product principles, assumptions, risks, metrics, governance and architecture.  
@@ -261,10 +282,10 @@ Review the existing monorepo; finalise schema and API contracts; establish authe
 **Exit:** foundation supports core workflows securely.
 
 ### Phase 4 — MVP development
-- Sprint 1: identity, profiles, research story creation, drafts, text publishing, contributor/source/status data.
-- Sprint 2: short-video and image upload, image-slide stories, media presentation, feed and story details.
-- Sprint 3: follows, appreciation, saves, questions/comments, sharing and basic search.
-- Sprint 4: reporting, moderation, corrections/retractions, audit history, analytics, monitoring, security and performance.
+- Sprint 1: identity, profiles, research story creation, private drafts, text publishing, audience selection, contributor/source/status data and server-side ownership authorization.
+- Sprint 2: short-video and image upload, image-slide stories, media presentation, audience-authorized media delivery, feed and story details.
+- Sprint 3: follows, audience-aware discovery, appreciation, saves, questions/comments, sharing, notifications and basic search.
+- Sprint 4: reporting, moderation, corrections/retractions, audience changes, audit history, analytics, monitoring, security, privacy and performance testing.
 
 Sprint boundaries may change based on dependencies.  
 **Exit:** complete journey from registration through discovery, publishing and meaningful engagement.
@@ -344,6 +365,19 @@ Start with a modular monolith, relational database, managed object storage for m
 
 Keep media files out of database rows. Use secure upload validation, limits, processing/optimisation, access controls and removal workflows. Use clear API contracts, server-side permission checks, reusable frontend components, central error handling and automated tests.
 
+### Audience authorization and content privacy
+
+The backend must implement a centralized, reusable authorization policy for published stories and associated media.
+
+- DRAFT: author only.
+- PUBLIC: everyone, including signed-out visitors.
+- MEMBERS: authenticated Citeface users.
+- FOLLOWERS: authenticated users with an active follow relationship with the author.
+
+Authorization must be enforced consistently across all relevant API endpoints, database queries, feeds, profiles, search, recommendations, notifications, shared links, media delivery and caches. Audience changes and follow/unfollow actions must immediately affect access. Relevant actions must be recorded in the audit history.
+
+The frontend must communicate the selected audience clearly, but must never be treated as the security boundary.
+
 ## 17. Governance
 
 Maintain:
@@ -361,12 +395,15 @@ Review each cycle: completed work, acceptance criteria, user feedback, metrics, 
 1. Audit the existing codebase and current application behaviour.
 2. Verify registration, login, logout, sessions and protected routes.
 3. Review database schema, API, frontend structure and tests.
-4. Establish the authenticated discovery experience—not a generic dashboard.
-5. Build the feed and story detail experience.
-6. Build video and image-slide publishing.
-7. Add community interactions.
-8. Complete trust, safety, analytics and release readiness.
-9. Test with real users before expanding scope.
+4. Verify draft ownership, privacy and persistence.
+5. Implement and test PUBLIC, MEMBERS and FOLLOWERS audience authorization.
+6. Verify media access, audience changes and follow/unfollow authorization.
+7. Establish the authenticated discovery experience—not a generic dashboard.
+8. Build the feed and story detail experience.
+9. Build video and image-slide publishing.
+10. Add community interactions.
+11. Complete trust, safety, analytics and release readiness.
+12. Test with real users before expanding scope.
 
 ## 19. Strategic conclusion
 

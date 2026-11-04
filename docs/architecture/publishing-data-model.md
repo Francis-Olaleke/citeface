@@ -134,10 +134,24 @@ Supported publication states:
 
 Additional correction or retraction status must be represented clearly and must not be confused with ordinary removal or archival.
 
+Audience must be a required publication property with the following supported values:
+
+- PUBLIC
+- MEMBERS
+- FOLLOWERS
+
+The audience field must default to PUBLIC for every new post.
+
+The selected audience must be persisted with the ResearchPost record. It must not be inferred from frontend settings or user-interface state.
+
+A draft may store its intended publication audience, but that audience must not grant anyone other than its author access to the draft.
+
+The server must validate the audience value before publication. Invalid or unsupported audience values must be rejected.
+
 Requirements:
 
 - Every post has an authenticated author.
-- DRAFT posts are private and accessible only to their authorized authors and explicitly authorized system roles.
+- DRAFT posts are private and accessible only to their authors.
 - DRAFT posts must never appear in public feeds, researcher profiles, public search results or discovery endpoints.
 - The author must be authorized to retrieve, update, delete or publish a draft.
 - The backend must enforce ownership on every draft operation.
@@ -149,6 +163,15 @@ Requirements:
 - Archived posts retain appropriate audit history.
 - A published post must have a valid publication timestamp.
 - DOI and source URL remain nullable.
+- Every new post defaults to the PUBLIC audience.
+- Published posts support PUBLIC, MEMBERS and FOLLOWERS audiences.
+- PUBLIC posts are accessible to everyone, including signed-out visitors.
+- MEMBERS posts are accessible only to authenticated Citeface users.
+- FOLLOWERS posts are accessible only to authenticated users who follow the post's author.
+- Authors may change the audience before publication and may change the audience of their published posts.
+- Audience changes must be validated server-side, enforced immediately and recorded in the audit history.
+- The author retains access to their own published posts.
+- Draft privacy is independent of the intended publication audience.
 
 ### 3.4 MediaAsset
 
@@ -192,9 +215,15 @@ Requirements:
 - Media ownership and post access must be checked server-side.
 - Only READY media may be used to complete publication of a post that requires that media.
 - Video duration must be checked using trusted server-side or media-provider metadata.
-- Valid video duration is 90–300 seconds inclusive.
+- Valid video duration is 90-300 seconds inclusive.
 - File type, size, integrity and safety must be validated.
 - Failed uploads must produce actionable error states.
+- Media associated with unpublished drafts must remain private to the draft author.
+- Access to media associated with published posts must follow the parent post's current audience permissions.
+- Private media must not be exposed through permanent public URLs or unprotected storage objects.
+- Media delivery must perform appropriate server-side authorization before providing access.
+- Audience changes must also affect associated media access immediately.
+- Media caches and delivery mechanisms must not preserve access after a user's authorization has been revoked.
 
 ### 3.5 PostMedia
 
@@ -216,6 +245,10 @@ Requirements:
 - Authorization must follow the parent post's visibility and ownership rules.
 - A video post must use valid video media.
 - A photo post must use valid image media.
+- Access to a media asset must be authorized using the parent ResearchPost's current publication state and audience.
+- A media asset attached to a DRAFT must remain accessible only to the draft's author.
+- Changing the parent post's audience must immediately update authorization for all associated media.
+- A PostMedia association must never independently grant public access to an asset.
 
 ### 3.6 Topic
 
@@ -275,6 +308,9 @@ Requirements:
 - Prevent duplicate follow relationships.
 - Prevent users from following themselves.
 - Follow relationships must support discovery and personalized feeds.
+- FOLLOWERS audience authorization must use the authenticated user's current active follow relationship with the post's author.
+- Unfollowing an author must immediately revoke access to that author's FOLLOWERS posts.
+- Follow relationships must be checked server-side and must not be trusted solely from cached frontend state.
 
 ### 4.2 TopicFollow
 
@@ -618,13 +654,16 @@ Unpublished or confidential research must not be sent to external AI providers w
 
 ### 11.1 Draft privacy
 
-- A DRAFT post is private by default.
-- Only its author and explicitly authorized system roles may access it.
-- All draft read, update, delete and publish operations require server-side authorization.
-- Unauthorized users must not be able to infer draft existence or contents.
-- Drafts must be excluded from public feed, profile, search, recommendation and discovery queries.
-- Draft media must remain private and must use authorization-aware access or appropriately scoped private delivery.
+- A DRAFT post is private to its author.
+- Only the author may retrieve, update, delete or publish their unpublished drafts.
+- No other user or privileged system role may access draft content through ordinary application access paths.
+- All draft read, update, delete and publish operations require server-side ownership authorization.
+- Unauthorized users must not be able to infer draft existence, contents or sensitive metadata.
+- Drafts must be excluded from public feeds, profiles, search, recommendations and discovery queries.
+- Draft media must remain private and accessible only to the draft author.
+- Draft privacy must remain independent of the intended publication audience.
 - Frontend route protection alone is insufficient.
+- Draft privacy must be enforced across APIs, database queries, object storage, media delivery, notifications, caches and other relevant access paths.
 
 ### 11.2 Draft persistence
 
@@ -649,6 +688,11 @@ Before a draft transitions to PUBLISHED, the backend must validate:
 - Video duration of 90–300 seconds inclusive.
 - Applicable rights and permissions confirmations.
 - All other required publication rules.
+- Audience is one of PUBLIC, MEMBERS or FOLLOWERS.
+- PUBLIC is the default audience for every new post.
+- The selected audience is stored with the post.
+- The author has permission to publish the draft.
+- Required media is authorized, valid and READY.
 
 Publishing must be an authorized, validated operation.
 
@@ -684,6 +728,18 @@ A post requiring media must not be published until all required media is READY a
 - API authorization must be applied to every read and write path.
 - Database queries must avoid exposing private content through joins, counts, aggregations or search indexes.
 - Storage keys and credentials must not act as publicly exposed authorization tokens.
+- The audience field must use a controlled enum or equivalent database constraint.
+- The default audience for new posts must be PUBLIC.
+- Every PUBLISHED post must have a valid audience.
+- DRAFT access must always be restricted to the author, regardless of the audience field.
+- PUBLIC access must not require authentication.
+- MEMBERS access requires an authenticated Citeface account.
+- FOLLOWERS access requires authentication and an active UserFollow relationship with the author.
+- Authors must retain access to their own published posts.
+- Audience authorization must be applied consistently across all retrieval and media-delivery paths.
+- Audience changes must be recorded as AuditEvent records, including the actor, affected post, previous audience, new audience and timestamp.
+- Audience changes must immediately affect feeds, profiles, search, recommendations, direct access, APIs, notifications, media delivery and caches.
+- Restricted content must not leak through database joins, aggregations, search indexes, previews or cached responses.
 
 ---
 
@@ -709,22 +765,22 @@ A failed publication attempt must preserve the draft and provide an actionable e
 
 ## 13. Decisions still requiring specification
 
-The following details remain open and must be resolved before the relevant functionality is implemented:
+The following technical details remain open and must be resolved before the relevant functionality is implemented:
 
-1. Exact audience options and access semantics.
-2. Whether private accounts are supported.
-3. Maximum number of videos per post.
-4. Image count and file-size limits.
-5. Accepted media formats and transcoding requirements.
-6. Publication-status vocabulary and who may assert each status.
-7. Required bibliographic fields for paper announcements.
-8. Exact correction and retraction workflow.
-9. Draft deletion and media-retention policy.
-10. Draft autosave behaviour and conflict handling across multiple sessions.
-11. Draft expiration or retention policy, if any.
-12. Exact privileged system roles permitted to access drafts and under what circumstances.
+1. Whether private researcher accounts are supported.
+2. Maximum number of videos per post.
+3. Image count and file-size limits.
+4. Accepted media formats and transcoding requirements.
+5. Publication-status vocabulary and who may assert each status.
+6. Required bibliographic fields for paper announcements.
+7. Exact correction and retraction workflow.
+8. Draft deletion and media-retention policy.
+9. Draft autosave behaviour and conflict handling across multiple sessions.
+10. Draft expiration or retention policy, if any.
 
-These decisions must not be invented during implementation.
+The audience options and access semantics are already decided in ADR-0001 and must not be reopened during implementation without an explicit product decision.
+
+Drafts are accessible only to their authors. Additional privileged draft-access roles are not part of the approved MVP policy.
 
 ---
 
