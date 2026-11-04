@@ -170,7 +170,11 @@ As an authenticated user, I want to publish a saved draft when it is ready so th
 - The owner can initiate publication of their draft.
 - The system performs full publication validation.
 - Required content fields must be complete.
-- The audience must be valid.
+- The author must select a valid publication audience before publishing.
+- Public is selected by default.
+- The author may choose Public, Citeface Members, or Followers.
+- The selected audience is stored with the published post.
+- The published post becomes accessible only to users permitted by its selected audience.
 - Required media must be READY.
 - Rights and permissions confirmation must be completed.
 - Failed validation leaves the draft intact.
@@ -184,16 +188,21 @@ As an authenticated user, I want to publish a saved draft when it is ready so th
 
 **Priority:** P0
 
-As an author, I want to select who can access my published content so that I can control its visibility.
+As an author, I want to choose who can access my published content so that I can control its visibility.
 
 **Acceptance criteria:**
-- The interface presents the approved audience options.
+- The publishing interface provides three audience options: Public, Citeface Members, and Followers.
+- Public is selected by default for every new story.
+- Authors can change the selected audience before publication.
 - The selected audience is stored with the post.
-- The server enforces audience permissions.
-- Restricted content is not exposed through feeds, profiles, search, direct API requests, or media URLs.
-- Drafts remain private regardless of the published-content audience options.
-
-**Note:** Exact audience semantics and final labels remain subject to product approval.
+- Public content is accessible to everyone, including signed-out visitors.
+- Members-only content is accessible only to authenticated Citeface users.
+- Followers-only content is accessible only to authenticated users who follow the author.
+- Audience permissions are enforced on the server.
+- Unauthorized users cannot access restricted content through feeds, profiles, search results, direct links, API requests, notifications, or media URLs.
+- Drafts remain private to their owners regardless of the intended publication audience.
+- The author can change the audience of their published post, subject to platform rules.
+- Audience changes are enforced across all access points and recorded in the audit history.
 
 ### PUB-013 — Display author identity
 
@@ -284,6 +293,8 @@ As an author, I want to edit my published post so that I can correct or improve 
 - The system validates changes.
 - Relevant change history is retained.
 - Unauthorized edits are rejected.
+- The author can change the published post's audience.
+- Any audience change is enforced across all access points and recorded in the audit history.
 
 ### PUB-020 — Remove or archive my published post
 
@@ -401,7 +412,10 @@ The first Citeface MVP must support:
 - Draft persistence across sessions and devices.
 - Server-side draft ownership and privacy enforcement.
 - Publication validation.
-- Audience selection and server-side access control.
+- Audience selection with Public as the default and Citeface Members and Followers as additional options.
+- Server-side audience enforcement across feeds, profiles, search, direct links, APIs, notifications, and media delivery.
+- Support for changing the audience of published posts, with immediate access-control enforcement and audit history.
+- Public access to stories without requiring authentication.
 - Video duration validation between 90 and 300 seconds inclusive.
 - Secure media upload and processing.
 - Author and contributor attribution.
