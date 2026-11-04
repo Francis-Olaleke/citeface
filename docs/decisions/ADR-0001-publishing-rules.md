@@ -37,13 +37,36 @@ Posts about unpublished or ongoing work are allowed, subject to platform rules, 
 
 A DOI or source link does not automatically establish peer review, scientific validity or correctness.
 
-### D4. Audience
+### D4. Audience and visibility
 
-The author chooses the audience for each post.
+**Decision:** Authors choose the audience for each published post.
 
-The exact audience options and access semantics must be finalized before implementation.
+The first MVP supports three audience options:
 
-The backend must enforce audience permissions on every relevant retrieval path.
+- **Public:** Accessible to everyone, including visitors who are not signed in.
+- **Citeface Members:** Accessible only to authenticated Citeface users.
+- **Followers:** Accessible only to authenticated users who follow the post's author.
+
+Public is the default audience for every new post.
+
+Authors may change the selected audience before publication and may change the audience of their published posts.
+
+Audience permissions must be enforced server-side across all relevant access paths, including:
+
+- Feeds and discovery.
+- Researcher profiles.
+- Search results and recommendations.
+- Individual post pages and direct links.
+- API requests.
+- Notifications and activity feeds.
+- Media delivery and media URLs.
+- Cached responses.
+
+Unauthorized users must not be able to retrieve restricted content or sensitive metadata through alternative access paths.
+
+Audience changes must take effect immediately, including revoking access from users who no longer qualify. Every audience change must be recorded in the audit history.
+
+Drafts remain private to their authors regardless of the intended publication audience. Audience selection does not make unpublished drafts accessible to other users.
 
 ### D5. Saved drafts — revised decision (2026-11-04)
 
@@ -62,7 +85,7 @@ Drafts must persist across authenticated sessions and devices.
 
 Draft privacy is mandatory:
 
-- Only the author and explicitly authorized system roles may access a draft.
+- Only the author may access their unpublished drafts.
 - Drafts must not appear in public feeds, researcher profiles, public search results or public discovery.
 - Unauthorized API requests must not reveal draft content or metadata.
 - Draft media must remain private and inaccessible to unauthorized users.
@@ -101,7 +124,12 @@ The publishing system must:
 - Prevent drafts from appearing in public discovery and retrieval systems.
 - Keep unpublished media private.
 - Validate all required publishing rules before publication.
-- Enforce audience permissions on all content retrieval paths.
+- Provide Public, Citeface Members and Followers audience options, with Public as the default.
+- Enforce audience permissions server-side across feeds, profiles, search, recommendations, direct links, APIs, notifications, media delivery and cached responses.
+- Allow authors to change the audience of published posts, enforce changes immediately and record them in the audit history.
+- Ensure public posts are accessible to signed-out visitors.
+- Ensure Members and Followers posts are accessible only to their authorized audiences.
+- Keep all unpublished drafts and associated media private to their authors.
 - Store media binaries separately from relational metadata.
 - Validate video duration using trusted metadata.
 - Allow nullable source URL and DOI fields.
@@ -118,7 +146,7 @@ This decision record does not specify:
 - Image-count limits.
 - Video transcoding provider.
 - Exact API endpoint names.
-- Final audience options.
+- Media-specific technical limits and provider configurations.
 - Detailed database indexing strategy.
 - Complex draft version history.
 
@@ -130,5 +158,6 @@ These details must be defined in the relevant technical specifications and archi
 |---|---|---|
 | 2026-10-30 | Saved drafts excluded from the first MVP | Superseded |
 | 2026-11-04 | Basic private saved drafts included in the first MVP | Accepted |
+| 2026-11-04 | Public, Citeface Members and Followers audience options finalized, with Public as default | Accepted |
 
 The revised decision is authoritative for future product specifications, architecture, implementation and testing.
