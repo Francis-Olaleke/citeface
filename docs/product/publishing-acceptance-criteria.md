@@ -235,7 +235,10 @@ The criteria cover:
 - Draft ownership is verified server-side.
 - Required content fields are complete.
 - Content type is valid.
-- Audience selection is valid.
+- The author has selected a valid publication audience.
+- Public is selected by default for new stories.
+- The author can select Public, Citeface Members, or Followers.
+- The selected audience is stored with the published post.
 - Contributor and rights requirements are satisfied.
 - Required media is READY.
 - Video duration is valid where applicable.
@@ -295,37 +298,50 @@ The criteria cover:
 
 **When** the author selects an audience,
 
-**Then** the system must store the selected audience and enforce its permissions.
+**Then** the system must store the selected audience and enforce its access permissions.
 
 **Verification:**
-- The interface displays the approved audience options.
+- The interface provides three audience options: Public, Citeface Members, and Followers.
+- Public is selected by default for every new story.
+- The author can change the selected audience before publication.
 - The server validates the selected audience.
-- The audience is stored correctly.
-- The selected audience is respected by all relevant read endpoints.
-- Draft privacy is independent of published-content audience selection.
-
-**Note:** Exact audience labels and access semantics remain subject to product approval.
+- The selected audience is stored correctly with the post.
+- Public content is accessible to everyone, including signed-out visitors.
+- Members-only content is accessible only to authenticated Citeface users.
+- Followers-only content is accessible only to authenticated users who follow the author.
+- The author retains access to their own published content.
+- Invalid audience values are rejected by the server.
+- Draft privacy remains independent of the selected publication audience.
+- Audience changes are recorded in the audit history.
 
 ### PUB-AC-015 — Published-content access enforcement
 
 **Priority:** P0
 
-**Given** a published post has an audience restriction,
+**Given** a published post has an assigned audience,
 
-**When** a user requests that post through any supported access path,
+**When** a user requests the post through any supported access path,
 
-**Then** the server must verify the user's authorization before returning protected content.
+**Then** the server must verify the user's authorization before returning protected content or media.
 
 **Verification:**
-- Feed access is enforced.
-- Profile access is enforced.
-- Search access is enforced.
-- Direct post requests are enforced.
-- API access is enforced.
-- Recommendation access is enforced.
-- Media delivery access is enforced.
+- Public stories are accessible without authentication.
+- Members-only stories require authentication.
+- Followers-only stories require authentication and an active follow relationship with the author.
+- Users who do not follow the author cannot access Followers-only stories.
+- Users who have unfollowed the author lose access to Followers-only stories.
+- Feed access respects the selected audience.
+- Profile listings respect the selected audience.
+- Search results respect the selected audience.
+- Recommendations respect the selected audience.
+- Direct post requests respect the selected audience.
+- API responses respect the selected audience.
+- Notifications do not expose restricted story content to unauthorized users.
+- Media delivery respects the selected audience.
 - Changing a post identifier does not bypass authorization.
 - Unauthorized requests do not reveal restricted content or sensitive metadata.
+- Cached responses do not expose restricted content to unauthorized users.
+- Server-side authorization works independently of frontend visibility controls.
 
 ## 6. Authorship and research integrity acceptance criteria
 
@@ -455,6 +471,13 @@ The criteria cover:
 - Updated content is stored correctly.
 - Relevant change history is retained.
 - Invalid updates are rejected.
+- The author can change the audience of their published post.
+- The server validates every audience change.
+- Audience changes are recorded in the audit history.
+- Changing to a more restrictive audience immediately prevents unauthorized access.
+- Changing to a less restrictive audience applies the new access permissions.
+- Feeds, profiles, search, direct links, APIs, notifications, and media delivery reflect the updated audience.
+- Cached content does not bypass updated access permissions.
 
 ### PUB-AC-023 — Remove or archive a published post
 
@@ -646,6 +669,10 @@ At minimum, the test suite should cover:
 - Required-field validation.
 - Video duration validation.
 - Audience validation.
+- Default audience assignment.
+- Public, Members, and Followers permission evaluation.
+- Follow-relationship authorization.
+- Audience-change validation.
 - Draft-state validation.
 - Media-state validation.
 - Publication readiness checks.
@@ -659,7 +686,15 @@ At minimum, the test suite should cover:
 - Draft publication.
 - Draft ownership enforcement.
 - Draft privacy.
-- Audience access control.
+- Public access without authentication.
+- Members-only access with and without authentication.
+- Followers-only access for followers and non-followers.
+- Access denial after unfollowing an author.
+- Audience changes after publication.
+- Immediate enforcement of restrictive audience changes.
+- Updated access after less restrictive audience changes.
+- Audience enforcement across feeds, profiles, search, direct links, APIs, notifications, and media delivery.
+- Cache and media authorization after audience changes.
 - Media upload and processing failure.
 - Published-content editing.
 - Removal and archival.
@@ -676,7 +711,15 @@ At minimum, the test suite should cover:
 - Confirm the draft is not visible publicly.
 - Complete required fields.
 - Publish successfully.
-- Confirm the published post follows its selected audience.
+- Confirm Public is selected by default.
+- Publish a Public story and confirm signed-out visitors can access it.
+- Publish a Members-only story and confirm signed-out visitors cannot access it.
+- Confirm authenticated members can access Members-only stories.
+- Publish a Followers-only story and confirm an eligible follower can access it.
+- Confirm a non-follower cannot access the Followers-only story.
+- Confirm access is denied after the user unfollows the author.
+- Change a published story's audience and verify that access permissions update.
+- Confirm restricted stories do not leak through search, profiles, feeds, notifications, or media URLs.
 - Confirm invalid media prevents publication.
 - Confirm correction and retraction status is visible.
 
@@ -687,15 +730,18 @@ Publishing is ready for the first MVP release only when:
 1. All P0 publishing stories have been implemented.
 2. All P0 acceptance criteria have been tested.
 3. Draft ownership and privacy are enforced server-side.
-4. Published-content audience restrictions are enforced server-side.
-5. Required media validation works.
-6. Failed publication does not destroy drafts.
-7. Published-content editing and removal work correctly.
-8. Basic visible corrections and retractions work.
-9. Reporting and basic moderation authorization work.
-10. Security and regression tests pass.
-11. The publishing experience works on supported desktop and mobile browsers.
-12. No known critical privacy or authorization vulnerability remains.
+4. Public, Members, and Followers audience permissions are enforced server-side across all relevant access paths.
+5. Public stories are accessible to signed-out visitors.
+6. Members-only and Followers-only stories cannot be accessed by unauthorized users.
+7. Published-story audience changes are enforced immediately and recorded in audit history.
+8. Required media validation works.
+9. Failed publication does not destroy drafts.
+10. Published-content editing and removal work correctly.
+11. Basic visible corrections and retractions work.
+12. Reporting and basic moderation authorization work.
+13. Security and regression tests pass.
+14. The publishing experience works on supported desktop and mobile browsers.
+15. No known critical privacy or authorization vulnerability remains.
 
 A feature must not be marked complete merely because its interface exists. Its server behaviour, persistence, authorization, failure handling, and tests must also satisfy the applicable criteria.
 
