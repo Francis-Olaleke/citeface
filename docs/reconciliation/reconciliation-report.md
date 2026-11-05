@@ -35,7 +35,7 @@ Pack items (P) and additional conflicts I found (A).
 | P6 | F-15 search not audience-aware | Authorize at query time; autocomplete, snippets, counts covered |
 | P7 | F-16 notifications could outlive access | Access re-checked at read time |
 | P8 | F-17 moderation vs draft privacy unclear | Moderation excludes drafts; `moderation_state` separate from `status` |
-| P9 | Lifecycle `REMOVED` vs `archived/retracted` | Canonical `DRAFT/PUBLISHED/ARCHIVED/RETRACTED` (pending approval) |
+| P9 | Lifecycle `REMOVED` vs `archived/retracted` | Canonical `DRAFT/PUBLISHED/ARCHIVED/RETRACTED` (approved, ADR-0002) |
 | P10 | `format` (text/video/image_slides) vs five content types | `content_type` + `media_type`; mapping documented |
 | P11 | Attestation was a single timestamp | Versioned contributor lists + append-only attestation |
 | P12 | Draft delete and audience-change endpoints missing | Added `DELETE /stories/:id`, `PATCH /stories/:id/audience`; allow-listed PATCH |
@@ -211,9 +211,9 @@ Security checklist additions:
 
 ## 9. Decisions you need to make
 
-Nothing below was invented; each is marked **[PENDING DECISION]** in the files.
+All ten were approved on 2026-11-05 and recorded in ADR-0002 (lifecycle and taxonomy) and ADR-0003 (the remaining nine decisions).
 
-1. Approve the canonical lifecycle and taxonomy (ADR-0002).
+1. DONE: canonical lifecycle and taxonomy approved (ADR-0002, accepted 2026-11-05).
 2. What is shown for a retracted post, and who besides the author may retract.
 3. Policy for posts whose author is suspended or deleted.
 4. Retention/deletion policy for archived and retracted posts and media.

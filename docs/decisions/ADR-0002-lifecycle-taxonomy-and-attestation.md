@@ -1,6 +1,6 @@
 # ADR-0002: Post Lifecycle, Content Taxonomy, Moderation State and Contributor Attestation
 
-- **Status:** PROPOSED — requires product-owner approval before implementation
+- **Status:** ACCEPTED (approved by the product owner, 2026-11-05)
 - **Date:** 2026-11-05
 - **Area:** Citeface publishing MVP
 - **Relationship:** Extends ADR-0001. Does not change any accepted ADR-0001 decision.
@@ -9,7 +9,7 @@
 
 The documentation set used conflicting vocabularies: the MVP specification used `draft/published/archived/retracted` and `text/video/image_slides`, while the publishing specification used `DRAFT/PUBLISHED/REMOVED` and five content types (`STORY, VIDEO, PHOTO, PAPER, METHODS`). The authorship attestation was specified as a single timestamp, which cannot prove which contributor list was attested once the list is edited.
 
-## 2. Proposed decisions
+## 2. Decisions
 
 **D1. Lifecycle.** `status` is one of `DRAFT`, `PUBLISHED`, `ARCHIVED`, `RETRACTED`. `REMOVED` is not a lifecycle state.
 
@@ -21,7 +21,7 @@ The documentation set used conflicting vocabularies: the MVP specification used 
 
 **D5. Access policy.** One central policy function evaluates draft → author → moderation → archive → audience (see MVP specification 3.2) and is used by every read path.
 
-## 3. Still open (not decided here)
+## 3. Items left open by this ADR (all resolved in ADR-0003)
 
 1. What viewers see for a retracted post (content with notice vs tombstone).
 2. Who besides the author may retract, and under what policy.
@@ -36,10 +36,10 @@ The documentation set used conflicting vocabularies: the MVP specification used 
 
 ## 4. Consequences
 
-If accepted, the MVP specification, publishing specification, data model, user stories, acceptance criteria and audit worksheet use this vocabulary, and a migration maps any existing `REMOVED` rows to `ARCHIVED` (author-removed) or `moderation_state` (moderator-removed).
+As accepted, the MVP specification, publishing specification, data model, user stories, acceptance criteria and audit worksheet use this vocabulary, and a migration maps any existing `REMOVED` rows to `ARCHIVED` (author-removed) or `moderation_state` (moderator-removed).
 
 ## 5. Decision history
 
 | Date | Decision | Status |
 |---|---|---|
-| 2026-11-05 | Lifecycle, taxonomy, moderation state, contributor attestation proposed | Proposed |
+| 2026-11-05 | Lifecycle, taxonomy, moderation state, contributor attestation approved | Accepted |
