@@ -2,6 +2,7 @@
 
 **Project:** Citeface
 **Status:** Planned / in progress
+**Last reconciled:** 5 November 2026
 **Primary objective:** Establish a clean, reproducible, documented TypeScript monorepo before implementing product features.
 
 ## 1. Build 0 outcomes
@@ -64,6 +65,8 @@ citeface/
 │   ├── testing/
 │   ├── decisions/
 │   ├── risks/
+│   ├── audits/
+│   ├── reconciliation/
 │   └── builds/
 ├── scripts/
 ├── .github/
@@ -87,6 +90,7 @@ Create directories when they have a real purpose; avoid filling the repository w
 - Architecture overview and decisions.
 - Security, privacy and research-integrity requirements.
 - UI/UX reference notes.
+- Repository audit worksheet and documentation reconciliation records.
 - Build plans and completion reports.
 
 ## 5. Engineering conventions
@@ -138,6 +142,8 @@ Build 0 creates the foundation and documents decisions. Product implementation b
 - Supported types: story, video, photo, paper announcement and methods.
 - Video duration: 90–300 seconds inclusive.
 - DOI/original-paper link: optional.
-- Audience: selected by author for each post; exact audience options still require definition.
-- Saved drafts: not supported in the first MVP.
-- Media upload states are technical workflow states, not drafts.
+- Audience: PUBLIC, MEMBERS or FOLLOWERS; PUBLIC is the default. Audience permissions are enforced server-side across all relevant access paths.
+- Audience changes after publication are allowed for the author, immediately enforced and recorded in audit history.
+- Saved drafts: basic private saved drafts are included in the first MVP; only the author may access their drafts and associated unpublished media.
+- Draft ownership and privacy are enforced server-side; administrative roles do not automatically grant draft access.
+- Media upload states are technical workflow states, not draft or publication states.
