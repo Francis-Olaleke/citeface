@@ -198,7 +198,7 @@ Scheduled publishing; collaborative draft editing; external draft sharing or rev
 
 Post lifecycle is kept separate from the technical state of media.
 
-### 7.1 Post lifecycle states **[PENDING DECISION: canonical vocabulary]**
+### 7.1 Post lifecycle states
 
 | State | Meaning |
 |---|---|

@@ -62,7 +62,7 @@ Verification is a profile status/claim workflow, not a role that grants scientif
 22. No confidential/unpublished material is sent to external AI in the MVP.
 23. All state-changing operations require server-side validation and authorization.
 
-### 3.1 Canonical lifecycle and taxonomy **[PENDING DECISION: lifecycle vocabulary]**
+### 3.1 Canonical lifecycle and taxonomy
 
 **Post lifecycle (`status`):**
 

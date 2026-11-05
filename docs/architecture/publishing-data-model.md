@@ -138,7 +138,7 @@ Supported publication states:
 - ARCHIVED
 - RETRACTED
 
-ARCHIVED is an author action that removes a post from normal discovery while retaining history. RETRACTED is a distinct, visible status and is never an ordinary deletion. REMOVED is not a publication state: platform moderation hiding or removal is a separate moderationState field (NONE, HIDDEN, REMOVED) so it cannot be confused with archival or retraction (see ADR-0002, proposed).
+ARCHIVED is an author action that removes a post from normal discovery while retaining history. RETRACTED is a distinct, visible status and is never an ordinary deletion. REMOVED is not a publication state: platform moderation hiding or removal is a separate moderationState field (NONE, HIDDEN, REMOVED) so it cannot be confused with archival or retraction (see ADR-0002).
 
 Audience must be a required publication property with the following supported values:
 
@@ -822,7 +822,7 @@ The following technical details remain open and must be resolved before the rele
 13. Retention and deletion of archived and retracted posts and their media.
 14. Unauthorized-response convention (404 versus 401) and saved-list behaviour after access is revoked.
 
-Items 11 to 14 and the lifecycle vocabulary are proposed in ADR-0002 and need product-owner approval.
+Items 11 to 14 remain open; the lifecycle vocabulary is approved in ADR-0002.
 
 The audience options and access semantics are already decided in ADR-0001 and must not be reopened during implementation without an explicit product decision.
 
