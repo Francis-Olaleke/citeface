@@ -1,10 +1,10 @@
 # CITEFACE
 ## Product Strategy, Requirements & Master Roadmap
 
-**Version:** 1.0  
-**Date:** 4 November 2026  
-**Status:** Foundational product reference  
-**Positioning:** Research. Connect. Discover.
+Version: 1.0  
+Date: 4 November 2026  
+Status: Foundational product reference  
+Positioning: Research. Connect. Discover.
 
 ---
 
@@ -251,10 +251,10 @@ AI recommendation engines, semantic search, AI assistants, automated collaborati
 ### Reader
 Register or browse → select interests → discover video/slide story → open story and sources → appreciate/save/comment → follow researcher/topic → return.
 
-**### Contributor
+### Contributor
 Register → create profile → create story → add video or slides → add title, explanation, category, sources, status and contributor details → preview → select publication audience (PUBLIC, MEMBERS or FOLLOWERS) → save draft or publish → respond to engagement.
 
-**### Returning member
+### Returning member
 Log in → discover stories from followed researchers and topics → explore content available to their account → revisit saved stories → participate in discussions → receive relevant notifications → return for new research and conversations.
 
 ### Researcher discovery
