@@ -21,7 +21,7 @@ The documentation set used conflicting vocabularies: the MVP specification used 
 
 **D5. Access policy.** One central policy function evaluates draft → author → moderation → archive → audience (see MVP specification 3.2) and is used by every read path.
 
-## 3. Still open (not decided here)
+## 3. Items left open by this ADR (all resolved in ADR-0003)
 
 1. What viewers see for a retracted post (content with notice vs tombstone).
 2. Who besides the author may retract, and under what policy.

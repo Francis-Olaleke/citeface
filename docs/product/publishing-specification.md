@@ -6,7 +6,7 @@
 **Product:** Citeface
 **Tagline:** Research. Connect. Discover.
 
-> Items marked **[PENDING DECISION]** need product-owner approval. See `docs/reconciliation/reconciliation-report.md`.
+> Decisions are recorded in ADR-0002 and ADR-0003 (both accepted 2026-11-05). Values marked configurable may be tuned without code changes. See `docs/reconciliation/reconciliation-report.md`.
 
 ---
 
@@ -180,7 +180,7 @@ A draft remains private until publication succeeds. Saving a draft does not publ
 
 ### 6.3 Draft validation
 
-Drafts may be incomplete. Full publication validation occurs on publish and checks the requirements for the content type, audience, at least one contributor, authorship attestation, rights confirmation, confirmed sources, and media readiness. If validation fails the system explains what to correct, keeps the draft intact, creates no partially published post, and allows returning to editing. Repeated publish requests must not create duplicates.
+Drafts may be incomplete and autosave about every 30 seconds; a stale write returns 409 and the UI offers load-latest or overwrite (ADR-0003 D5). Full publication validation occurs on publish and checks the requirements for the content type, audience, at least one contributor, authorship attestation, rights confirmation, confirmed sources, and media readiness. If validation fails the system explains what to correct, keeps the draft intact, creates no partially published post, and allows returning to editing. Repeated publish requests must not create duplicates.
 
 ### 6.4 Draft ownership and security
 
@@ -207,7 +207,7 @@ Post lifecycle is kept separate from the technical state of media.
 | `ARCHIVED` | Author-archived; excluded from normal discovery; history retained |
 | `RETRACTED` | Visibly retracted; distinct from ordinary archival or removal |
 
-`REMOVED` is retired as a lifecycle state. Platform moderation hiding or removal is a separate control (`moderation_state`: `NONE`, `HIDDEN`, `REMOVED`) so it is never confused with author archival or retraction. A retraction is never treated as an ordinary deletion. What authorized viewers see for a retracted story (retained content with notice versus tombstone) is **[PENDING DECISION]**; default recommendation is visible status, reason and metadata with content visibility governed by policy.
+`REMOVED` is retired as a lifecycle state. Platform moderation hiding or removal is a separate control (`moderation_state`: `NONE`, `HIDDEN`, `REMOVED`) so it is never confused with author archival or retraction. A retraction is never treated as an ordinary deletion. A RETRACTED story stays reachable by direct link and on the author's profile for viewers who pass the audience check, showing its content behind a prominent retraction banner with reason and date. It is removed from feeds, search and recommendations; comments are locked and new appreciations and saves are blocked (ADR-0003 D1).
 
 ### 7.2 Media-processing states
 
@@ -231,7 +231,7 @@ Before publishing a post containing media the system confirms that required uplo
 
 The system must validate file type and size on the server; reject unsupported or invalid files; use secure media storage; avoid exposing storage credentials or private infrastructure; restrict access to unpublished media; provide clear upload progress and failure feedback; and avoid making media public before the post is published and authorized for access.
 
-Storage provider, file-size limits, image-count limits, supported formats, codecs and transcoding configuration remain technical decisions **[PENDING DECISION: technical limits]**.
+Launch limits (configurable without code changes; ADR-0003 D4): images are JPEG, PNG or WebP only, up to 10 per PHOTO story and 10 MB each (SVG and GIF rejected); a VIDEO story has one video, MP4 (H.264/AAC), up to 500 MB and 90-300 seconds, transcoded to 720p with a 480p fallback and a generated thumbnail. The storage provider remains a technical choice for the architecture build.
 
 ### 8.2 Video requirements
 

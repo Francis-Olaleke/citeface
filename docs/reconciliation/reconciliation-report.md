@@ -211,7 +211,7 @@ Security checklist additions:
 
 ## 9. Decisions you need to make
 
-Nothing below was invented; each is marked **[PENDING DECISION]** in the files.
+All ten were approved on 2026-11-05 and recorded in ADR-0002 (lifecycle and taxonomy) and ADR-0003 (the remaining nine decisions).
 
 1. DONE: canonical lifecycle and taxonomy approved (ADR-0002, accepted 2026-11-05).
 2. What is shown for a retracted post, and who besides the author may retract.

@@ -822,7 +822,7 @@ The following technical details remain open and must be resolved before the rele
 13. Retention and deletion of archived and retracted posts and their media.
 14. Unauthorized-response convention (404 versus 401) and saved-list behaviour after access is revoked.
 
-Items 11 to 14 remain open; the lifecycle vocabulary is approved in ADR-0002.
+Resolved by ADR-0002 and ADR-0003 (accepted 2026-11-05): items 2, 3 and 4 (media limits, D4), 8 (draft deletion and media retention, D3), 9 (autosave, D5), 10 (no draft expiry in the MVP, D5) and 11 to 14 (D1, D2, D3, D7, D9). Partly addressed: item 7 (retraction workflow, D1). Still open: items 1 (private researcher accounts), 5 (publication-status vocabulary) and 6 (required bibliographic fields).
 
 The audience options and access semantics are already decided in ADR-0001 and must not be reopened during implementation without an explicit product decision.
 

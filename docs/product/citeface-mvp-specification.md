@@ -5,7 +5,7 @@
 **Status:** Proposed implementation specification; reconcile with codebase audit before implementation.
 **Supersedes:** v1.0 (4 November 2026)
 
-> Items marked **[PENDING DECISION]** need product-owner approval before the relevant feature is built. See `docs/reconciliation/reconciliation-report.md` for the change log and open decisions.
+> Decisions are recorded in ADR-0002 and ADR-0003 (both accepted 2026-11-05). Values marked configurable may be tuned without code changes. See `docs/reconciliation/reconciliation-report.md`.
 
 ## 1. Purpose and scope
 
@@ -61,6 +61,7 @@ Verification is a profile status/claim workflow, not a role that grants scientif
 21. Media-processing state is separate from post lifecycle state.
 22. No confidential/unpublished material is sent to external AI in the MVP.
 23. All state-changing operations require server-side validation and authorization.
+24. Account suspension hides the author's published stories (moderation_state HIDDEN, reversible). Self-deleted accounts follow the 30-day grace period and erasure policy in ADR-0003 D2.
 
 ### 3.1 Canonical lifecycle and taxonomy
 
@@ -100,11 +101,11 @@ One reusable server-side policy function (for example `canViewStory(viewer, stor
    - `MEMBERS`: authenticated user.
    - `FOLLOWERS`: authenticated user with an existing `user_follows` row for the author, evaluated at request time.
 
-What a viewer sees for a `RETRACTED` story (retained content plus prominent notice versus a tombstone) is **[PENDING DECISION]**; default recommendation is visible status, reason and metadata, with content visibility governed by policy/moderation.
+A RETRACTED story stays reachable by direct link and on the author's profile for viewers who pass the audience check, showing its content behind a prominent retraction banner with reason and date. It is removed from feeds, search and recommendations; comments are locked and new appreciations and saves are blocked (ADR-0003 D1).
 
 The same policy must be applied to: feed, story detail, profiles' story lists, search (results, autocomplete, snippets, counts, facets), recommendations, comments, reactions, saves, sources/contributors/previews, notifications, shared links, media delivery, and caches.
 
-**Unauthorized response convention [PENDING DECISION]:** drafts and non-qualifying FOLLOWERS stories return `404`; MEMBERS stories requested while signed out return `401` with a generic body. Responses never include title, summary, author or media metadata of a restricted story.
+**Unauthorized response convention (ADR-0003 D7):** drafts and non-qualifying FOLLOWERS stories return `404`; MEMBERS stories requested while signed out return `401` with a generic body. Responses never include title, summary, author or media metadata of a restricted story.
 
 **Caching:** responses for non-PUBLIC stories must not be stored in shared caches (`Cache-Control: private` or `no-store`). Shared caches/CDNs for PUBLIC content must be invalidated or bypassed when a story's audience becomes more restrictive. Signed media URLs are short-lived and issued only after the access check; they must never act as permanent public links.
 
@@ -239,6 +240,7 @@ If equivalent endpoints already exist, document and reuse them rather than addin
 **Behaviour:**
 - Create starts as `DRAFT` with `audience = PUBLIC` preselected.
 - Drafts may be incomplete; full validation occurs at publish.
+- Drafts autosave about every 30 seconds and when the user leaves a field. Each draft has a version number; a stale write returns `409` and the UI offers load-latest or overwrite. Drafts do not expire in the MVP (ADR-0003 D5).
 - Only the author may read, edit, delete or publish their own drafts. Administrative roles do not automatically gain draft access.
 - Drafts persist across sessions and devices; every draft operation enforces server-side ownership.
 - Draft media stays private to the author.
@@ -327,7 +329,7 @@ If equivalent endpoints already exist, document and reuse them rather than addin
 
 **Behaviour:**
 - Allow-list MIME types and inspect file signatures; do not trust extension or client MIME.
-- Enforce byte limits. Limits for image count, file size, formats and codecs are **[PENDING DECISION: technical limits]**.
+- Enforce byte limits. Launch limits (configurable without code changes; ADR-0003 D4): images are JPEG, PNG or WebP only, up to 10 per PHOTO story and 10 MB each (SVG and GIF rejected); a VIDEO story has one video, MP4 (H.264/AAC), up to 500 MB and 90-300 seconds, transcoded to 720p with a 480p fallback and a generated thumbnail.
 - Video duration must be **90–300 seconds inclusive**, taken from trusted server-side or provider metadata, never client-reported only.
 - Store objects privately; use random storage keys, never user-supplied filenames.
 - Draft media is never reachable through guessable or permanent public URLs.
@@ -335,7 +337,7 @@ If equivalent endpoints already exist, document and reuse them rather than addin
 - Storage credentials and internal infrastructure details are never exposed to clients.
 - A failed upload/processing leaves the draft intact, gives an actionable error, and lets the user retry or remove the media.
 - Required media must be `READY` before publish.
-- Define cleanup for abandoned uploads and deleted drafts; consider malware scanning where proportionate.
+- Purge abandoned uploads after 24 hours and media of deleted drafts within 7 days (ADR-0003 D3); consider malware scanning where proportionate.
 - Reject executable and unsupported formats.
 
 **Acceptance criteria:** allowed media uploads; unsupported/oversize rejected; ownership enforced; state tracked; video of exactly 90 s and 300 s accepted, 89 s and 301 s rejected; draft media private; published media follows story audience, including immediately after an audience change; failures surface safely without destroying the draft.
@@ -426,7 +428,7 @@ If equivalent endpoints already exist, document and reuse them rather than addin
 
 **API:** `PUT /api/stories/:storyId/save`, `DELETE /api/stories/:storyId/save`, `GET /api/me/saved-stories`.
 
-**Behaviour:** a user may save only stories they can currently access. A saved entry never bypasses authorization: if access is later revoked (audience change, unfollow, archive, moderation), the saved list must not return the story's content, media or title; it may show an unavailable placeholder or omit the entry **[PENDING DECISION: placeholder vs omit]**.
+**Behaviour:** a user may save only stories they can currently access. A saved entry never bypasses authorization: if access is later revoked (audience change, unfollow, archive, moderation), the saved list must not return the story's content, media or title; it shows a "No longer available" placeholder with no title, author or media, which the user can remove; if access returns, the entry reappears in full (ADR-0003 D9).
 
 **Acceptance criteria:** save/unsave; list private to owner; duplicate idempotent; revoked/unavailable stories return no restricted content.
 
@@ -499,7 +501,7 @@ If notifications threaten MVP delivery, release a minimal in-app list after core
 - Validate target and reason; include copyright/rights-violation reason codes; prevent duplicate spam.
 - Admin endpoints require moderator/admin permission.
 - Moderation applies to published or otherwise reportable platform content. It does **not** grant moderators access to unpublished drafts or draft media; any exceptional legal/security process must be separately defined.
-- Moderator access to restricted (MEMBERS/FOLLOWERS) published stories is limited to reported targets and is audited **[PENDING DECISION]**.
+- Moderator access to restricted (MEMBERS/FOLLOWERS) published stories is limited to reported targets and every view is written to the audit log; there is no browsing of restricted content (ADR-0003 D8).
 - Moderation hiding/removal sets `moderation_state`; it does not alter lifecycle `status`.
 - Record actions and reasons; reporter identity is not revealed to the reported user by default; a report is not proof of wrongdoing.
 - Define urgent handling and escalation for safety/legal issues.
@@ -518,8 +520,8 @@ If notifications threaten MVP delivery, release a minimal in-app list after core
 - **Archive** removes the story from normal discovery while retaining history; it is not retraction.
 - **Retraction** requires a reason and timestamp and shows a clear label; content is never silently rewritten as if still valid.
 - Retractions of Citeface posts are distinguishable from retractions of external papers a post references; claims about external retractions require an appropriate source or confirmation.
-- Visibility of retracted content: **[PENDING DECISION]**, default recommendation in 3.2.
-- Retraction authority beyond the author (e.g. moderators) follows a documented policy **[PENDING DECISION]**.
+- Visibility of retracted content follows ADR-0003 D1 (see 3.2).
+- Besides the author, a moderator or administrator may retract only through a documented moderation action with a reason, which notifies the author and is audited (ADR-0003 D1). Harmful or unlawful content uses moderation_state HIDDEN instead.
 
 **API:** `POST /api/stories/:id/corrections`, `/archive`, `/retract`.
 
@@ -536,6 +538,7 @@ If notifications threaten MVP delivery, release a minimal in-app list after core
 - Record privileged actions; audit events cover publish, audience change, archive, correction, retraction, contributor change, attestation, moderation actions and role changes.
 - Avoid logging passwords, session secrets, draft content or unnecessary personal data.
 - Provide minimal admin workflows required for beta.
+- Retain audit events for at least 24 months; ordinary user actions cannot delete them (ADR-0003 D3).
 
 **Tests:** role escalation denied; admin endpoint protected; admin cannot read another user's draft; audit record created for each event type above; sensitive values and draft content absent from logs.
 
@@ -788,4 +791,4 @@ Before implementing any item:
 6. Run the relevant test, typecheck and build commands.
 7. Record the change and remaining risks.
 
-Do not silently invent answers to items marked **[PENDING DECISION]**. This specification is a target contract; the repository audit determines the safe implementation sequence.
+Do not silently invent answers to open decisions; record them in an ADR before implementing. This specification is a target contract; the repository audit determines the safe implementation sequence.
