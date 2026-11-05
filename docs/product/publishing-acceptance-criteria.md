@@ -1,7 +1,7 @@
 # Citeface Publishing Acceptance Criteria
 
 **Document status:** Product acceptance criteria  
-**Version:** 2.0  
+**Version:** 2.1  
 **Last updated:** 4 November 2026  
 **Product:** Citeface
 
@@ -185,6 +185,7 @@ The criteria cover:
 - Drafts persist across sessions and devices.
 - Another user cannot retrieve the draft by guessing or changing its identifier.
 - Unauthorized direct API requests are rejected.
+- Administrators and moderators acting without ownership cannot retrieve or reopen another user's draft.
 
 ### PUB-AC-009 — Update a draft
 
@@ -239,6 +240,7 @@ The criteria cover:
 - Public is selected by default for new stories.
 - The author can select Public, Citeface Members, or Followers.
 - The selected audience is stored with the published post.
+- At least one contributor is listed and a valid authorship attestation is recorded.
 - Contributor and rights requirements are satisfied.
 - Required media is READY.
 - Video duration is valid where applicable.
@@ -341,6 +343,11 @@ The criteria cover:
 - Changing a post identifier does not bypass authorization.
 - Unauthorized requests do not reveal restricted content or sensitive metadata.
 - Cached responses do not expose restricted content to unauthorized users.
+- Source metadata, contributor details and previews respect the selected audience.
+- Comments, reactions and saves require current access to the parent story.
+- Notification previews and targets are re-authorized at read time.
+- Search autocomplete, snippets, counts and facets do not leak restricted stories.
+- Shared links and link previews expose no metadata of restricted stories.
 - Server-side authorization works independently of frontend visibility controls.
 
 ## 6. Authorship and research integrity acceptance criteria
@@ -376,6 +383,11 @@ The criteria cover:
 - Contributor order is preserved.
 - Contributor roles are preserved where supplied.
 - The publishing user confirms authority to list contributors.
+- At least one contributor is required to publish.
+- The attestation is server-generated; the client cannot supply publisher, timestamp or policy version.
+- The attestation references the contributor-list version it covers.
+- Changing a published list creates a new version, requires renewed attestation and an audit record.
+- Earlier versions and attestations remain unchanged.
 - Formal co-author approval is not required for the initial MVP.
 
 ### PUB-AC-018 — DOI and source metadata
@@ -411,6 +423,7 @@ The criteria cover:
 - Publication is blocked until required confirmation is supplied.
 - The confirmation is recorded.
 - The system provides a reporting route for suspected rights violations.
+- The confirmation is recorded with a server timestamp and policy version, separately from the authorship attestation.
 
 ## 7. Media-processing acceptance criteria
 
@@ -478,6 +491,7 @@ The criteria cover:
 - Changing to a less restrictive audience applies the new access permissions.
 - Feeds, profiles, search, direct links, APIs, notifications, and media delivery reflect the updated audience.
 - Cached content does not bypass updated access permissions.
+- Authorized system roles cannot edit drafts.
 
 ### PUB-AC-023 — Remove or archive a published post
 
@@ -494,6 +508,7 @@ The criteria cover:
 - The post is removed from normal discovery.
 - Appropriate audit history is preserved.
 - Removal is distinguishable from retraction.
+- Moderation removal is represented separately from author archival and from retraction.
 - Unauthorized requests are rejected.
 
 ### PUB-AC-024 — Visible corrections
@@ -565,6 +580,32 @@ The criteria cover:
 - Actions are recorded.
 - Unauthorized moderation actions are rejected.
 - Sensitive moderation information is not exposed publicly.
+
+### PUB-AC-033 — Draft access by privileged roles
+
+**Priority:** P0
+
+**Given** a user owns a draft,
+
+**When** an administrator or moderator without ownership requests, edits, publishes or deletes it,
+
+**Then** the server must deny the request.
+
+### PUB-AC-034 — Sharing and previews
+
+**Priority:** P0
+
+**Given** a story has an audience,
+
+**When** its link or preview is requested,
+
+**Then** access follows the story's current audience.
+
+**Verification:**
+- A public link works for signed-out visitors.
+- MEMBERS and FOLLOWERS links are denied to unauthorized users without exposing metadata.
+- Previews of restricted stories contain no title, summary, author or media.
+- A link stops working for a user after an audience restriction or unfollow.
 
 ## 10. Reliability and usability acceptance criteria
 
@@ -677,6 +718,9 @@ At minimum, the test suite should cover:
 - Media-state validation.
 - Publication readiness checks.
 - Contributor and rights-confirmation validation.
+- Video duration boundaries (89, 90, 300 and 301 seconds).
+- Central audience policy matrix (draft, author, PUBLIC, MEMBERS, FOLLOWERS, archived, retracted, moderation states).
+- Contributor-list versioning and attestation binding.
 
 ### 12.2 API and integration tests
 - Draft creation.
@@ -700,6 +744,12 @@ At minimum, the test suite should cover:
 - Removal and archival.
 - Corrections and retractions.
 - Reporting and moderation authorization.
+- Draft access denied to administrator or moderator without ownership.
+- Audience-aware sources, comments, reactions and saves.
+- Notification preview authorization at read time.
+- Search autocomplete, snippet and count leakage.
+- Cache invalidation after audience change or unfollow.
+- Published contributor update requiring renewed attestation.
 
 ### 12.3 End-to-end tests
 - Register and authenticate.
@@ -742,6 +792,7 @@ Publishing is ready for the first MVP release only when:
 13. Security and regression tests pass.
 14. The publishing experience works on supported desktop and mobile browsers.
 15. No known critical privacy or authorization vulnerability remains.
+16. Contributor attestation is versioned and server-generated.
 
 A feature must not be marked complete merely because its interface exists. Its server behaviour, persistence, authorization, failure handling, and tests must also satisfy the applicable criteria.
 

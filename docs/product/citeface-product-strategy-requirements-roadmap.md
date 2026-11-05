@@ -1,7 +1,7 @@
 # CITEFACE
 ## Product Strategy, Requirements & Master Roadmap
 
-Version: 1.0  
+Version: 1.1  
 Date: 4 November 2026  
 Status: Foundational product reference  
 Positioning: Research. Connect. Discover.
@@ -96,6 +96,9 @@ Short research videos lead the content identity. Initial formats include video a
 ### Image-slide research stories
 Supported from the first meaningful release. Formats include graphical abstracts, infographics, diagrams, charts, illustrations and multi-image presentations. Video must not be compulsory.
 
+### Content types and video duration
+The first release supports five content types: STORY (written research explanations), VIDEO, PHOTO (images and image-slide stories), PAPER (paper announcements) and METHODS. Video leads the feed identity; other types are first-class. Short videos are 90-300 seconds inclusive, validated from trusted media metadata.
+
 ### Research story information
 A story may include:
 - Title and short description.
@@ -137,11 +140,11 @@ Future modules include opportunities, institutions/labs, advanced networking, an
 - **FR-01 Registration:** Users can create accounts with validated required fields.
 - **FR-02 Authentication:** Users can log in and log out; protected operations require authentication.
 - **FR-03 Profiles:** Users can create and update profiles; optional personal information is not unnecessarily compulsory.
-- **FR-04 Story creation:** Authenticated users can create research stories.
+- **FR-04 Story creation:** Authenticated users can create research stories of type STORY, VIDEO, PHOTO, PAPER or METHODS.
 - **FR-05 Media upload:** Supported short videos and images can be uploaded with file-type and size validation.
 - **FR-06 Drafts:** Authenticated users can create, save, reopen, edit, update, delete and publish their own drafts. Drafts persist across sessions and devices and are accessible only to their authors. Drafts must remain private regardless of their intended publication audience and must be excluded from feeds, profiles, search, recommendations, notifications and unauthorized API or media access. Server-side ownership authorization is required for every draft operation.
 - **FR-07 Publication:** Authenticated users can publish completed stories after server-side validation. Every new story defaults to the PUBLIC audience. Authors can select PUBLIC, MEMBERS or FOLLOWERS before publication and can change the audience of their published stories. PUBLIC stories are accessible to everyone, including signed-out visitors. MEMBERS stories are accessible only to authenticated Citeface users. FOLLOWERS stories are accessible only to authenticated users who follow the author. Audience permissions must be enforced server-side across all relevant access paths.
-- **FR-08 Attribution:** Publisher attests authority to list contributors; contributor names, order and roles are recorded.
+- **FR-08 Attribution:** At least one contributor is required to publish. The publisher attests to authority to list contributors (not individual co-author approval) and confirms rights and permissions. Contributor names, order and roles are recorded in versioned contributor lists; the attestation is bound to the version it covers, and changing a published list requires renewed attestation.
 - **FR-09 Feed:** Users can discover published stories in a feed supporting video and image-slide formats.
 - **FR-10 Story detail:** Story details include content, contributors, sources and status.
 - **FR-11 Follow researchers:** Users can follow/unfollow researchers.
@@ -151,7 +154,7 @@ Future modules include opportunities, institutions/labs, advanced networking, an
 - **FR-15 Saves:** Users can save/unsave stories.
 - **FR-16 Search:** Users can search stories and researcher profiles.
 - **FR-17 Sharing:** Users can share stories through appropriate in-platform and external sharing mechanisms. Public stories can be shared with anyone, including signed-out visitors. Sharing a restricted story must never bypass its audience permissions. Shared links, previews and media must preserve the story's current access rules.
-- **FR-18 Notifications:** Users receive relevant interaction and followed-content notifications.
+- **FR-18 Notifications:** Users receive relevant interaction and followed-content notifications. Previews and targets are re-authorized at read time and never preserve access after an audience change or unfollow.
 - **FR-19 Reporting:** Users can report content and suspicious behaviour.
 - **FR-20 Moderation:** Authorised moderators can review reports and take actions.
 - **FR-21 Corrections/retractions:** Stories support visible correction and retraction workflows.
@@ -202,6 +205,10 @@ Start with a modular monolith and relational database. Introduce distributed ser
 - Authors retain access to their own published stories regardless of audience.
 - Unfollowing an author immediately revokes access to that author's FOLLOWERS stories.
 
+- Contributor lists are versioned; attestation metadata is server-generated and tied to the list version it covers.
+- Source metadata, contributor details, comments, reactions, saves, previews and notifications inherit the access rules of the parent story.
+- Administrators and moderators do not automatically gain access to another user's drafts or draft media.
+
 Citeface must distinguish corrections and retractions of content published on Citeface from corrections and retractions of external research papers referenced by Citeface posts.
 
 ## 11. MVP definition
@@ -217,9 +224,11 @@ The MVP is the smallest credible version that delivers the core promise. It must
 **Publishing**
 - Create/edit research stories.
 - Draft and publish workflows.
+- Five content types: STORY, VIDEO, PHOTO, PAPER and METHODS.
 - Text explanations.
-- Short-video upload and playback.
-- Image upload and image-slide stories.
+- Short-video upload and playback (90-300 seconds inclusive).
+- Image upload and image-slide (PHOTO) stories.
+- Rights and permissions confirmation and versioned contributor attestation.
 - Categories, contributors, sources and status labels.
 - Audience selection for published stories, with PUBLIC as the default and MEMBERS and FOLLOWERS as additional options.
 - Audience changes for published stories, including immediate authorization updates and audit history.
@@ -282,7 +291,7 @@ Review the existing monorepo; finalise schema and API contracts; establish authe
 **Exit:** foundation supports core workflows securely.
 
 ### Phase 4 — MVP development
-- Sprint 1: identity, profiles, research story creation, private drafts, text publishing, audience selection, contributor/source/status data and server-side ownership authorization.
+- Sprint 1: identity, profiles, research story creation, private drafts, text publishing, audience selection, contributor/source/status data, rights confirmation, versioned authorship attestation and server-side ownership authorization.
 - Sprint 2: short-video and image upload, image-slide stories, media presentation, audience-authorized media delivery, feed and story details.
 - Sprint 3: follows, audience-aware discovery, appreciation, saves, questions/comments, sharing, notifications and basic search.
 - Sprint 4: reporting, moderation, corrections/retractions, audience changes, audit history, analytics, monitoring, security, privacy and performance testing.
@@ -373,6 +382,8 @@ The backend must implement a centralized, reusable authorization policy for publ
 - PUBLIC: everyone, including signed-out visitors.
 - MEMBERS: authenticated Citeface users.
 - FOLLOWERS: authenticated users with an active follow relationship with the author.
+- ARCHIVED: author only, excluded from discovery. RETRACTED: visible status per the retraction policy (pending decision).
+- Platform moderation hiding/removal is a separate moderation state, not a lifecycle state, and never grants draft access.
 
 Authorization must be enforced consistently across all relevant API endpoints, database queries, feeds, profiles, search, recommendations, notifications, shared links, media delivery and caches. Audience changes and follow/unfollow actions must immediately affect access. Relevant actions must be recorded in the audit history.
 

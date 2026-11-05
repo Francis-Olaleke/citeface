@@ -34,6 +34,8 @@ The supplied researcher-profile reference illustrates:
 
 **Product implication:** Citeface profiles should function as professional research identities, not merely generic social profiles.
 
+**Scope note:** the "message" action is not an MVP commitment (direct messages are out of scope). Profile story lists are audience-aware and never include drafts.
+
 **Trust requirement:** academic metrics such as citations and h-index should only be presented with clear source attribution. User-entered metrics must not be represented as independently verified.
 
 ### Reference B — Research discovery feed
@@ -48,6 +50,8 @@ The supplied research-discovery reference illustrates:
 **Product implication:** Citeface should support topic-based research discovery and discussion, not rely only on a single chronological social feed.
 
 **Trust requirement:** votes, ratings and engagement are community signals. They must not be presented as proof of scientific validity or research quality.
+
+**MVP scope:** a single appreciation action only; voting and ratings are not in the MVP until their meaning is decided.
 
 ### Reference C — Researcher-first social dashboard
 
@@ -130,11 +134,13 @@ Do not implement a feature solely because it appears in a screenshot.
 
 ## 10. Decisions still required
 
-- Whether shared connections and mutual connections are in the MVP.
-- Whether citation and h-index metrics are shown in the first release and which source provides them.
-- Verification categories, evidence and review process.
-- Research hub creation, ownership, moderation and taxonomy.
-- Definitions for Trending, Discussed and Top.
-- Whether voting is included, and if so, what votes mean.
-- Scope of messaging, events and communities.
-- Exact navigation for the first release.
+| Decision | Classification |
+|---|---|
+| Exact navigation for the first release | Required before MVP implementation |
+| Definitions for Trending, Discussed and Top (recent-first until defined) | Required before those filters are shown |
+| Whether voting is included and what votes mean | Safe to decide during the feed/engagement build; MVP uses appreciation only |
+| Verification categories, evidence and review process | Safe to decide during the profile build |
+| Whether citation/h-index metrics are shown and from which source | Safe to decide during the profile build; deferred by default |
+| Whether shared/mutual connections are in the MVP | Explicitly deferred |
+| Research hub creation, ownership, moderation and taxonomy | Explicitly deferred (MVP uses seeded categories) |
+| Scope of messaging, events and communities | Explicitly deferred |

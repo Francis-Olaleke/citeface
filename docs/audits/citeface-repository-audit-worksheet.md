@@ -23,7 +23,23 @@ For each row, record file paths, implementation status, tests and evidence.
 | Protected frontend routes | Not inspected | | |
 | Profile read/update | Not inspected | | |
 | Research interests/taxonomy | Not inspected | | |
-| | Publishing without saved drafts | Not inspected | | |
+| Private draft creation/retrieval/update/deletion | Not inspected | | |
+| Draft persistence across sessions/devices | Not inspected | | |
+| Draft ownership authorization, including admin non-owner denial | Not inspected | | |
+| Draft media privacy and secure delivery | Not inspected | | |
+| Story publication validation and state transition | Not inspected | | |
+| Audience defaults and PUBLIC/MEMBERS/FOLLOWERS enforcement | Not inspected | | |
+| Published-story audience changes and audit history | Not inspected | | |
+| Immediate access revocation after unfollow | Not inspected | | |
+| Audience-aware feeds, profiles, search and direct access | Not inspected | | |
+| Audience-aware notifications, previews and caches | Not inspected | | |
+| Audience-aware sharing, link previews, comments, reactions and saves | Not inspected | | |
+| Contributor list versioning and authorship attestation | Not inspected | | |
+| Published contributor changes and renewed attestation | Not inspected | | |
+| Rights and permissions confirmation | Not inspected | | |
+| Video duration validation 90-300 s inclusive (trusted metadata) | Not inspected | | |
+| Media processing states separate from post status | Not inspected | | |
+| Archive, correction and retraction lifecycle | Not inspected | | |
 | Story edit/publish | Not inspected | | |
 | Contributors/attestation | Not inspected | | |
 | Sources/DOI/URL confirmation | Not inspected | | |
@@ -94,6 +110,15 @@ Run the repository's actual documented scripts; do not assume these names are co
 - [ ] Upload signature/type/size validation.
 - [ ] Safe logging.
 - [ ] Admin audit trail.
+- [ ] Draft ownership is enforced on every API read/write/delete/publish operation.
+- [ ] Administrative and moderator roles do not automatically bypass draft ownership.
+- [ ] Audience authorization is enforced on direct story reads and every discovery path.
+- [ ] Audience changes and unfollowing revoke access on subsequent requests.
+- [ ] Source metadata, notifications, previews, counts, shared links and caches do not leak restricted stories.
+- [ ] Published media inherits parent-story audience; draft media remains author-only.
+- [ ] Authorship attestation is server-generated and bound to the contributor-list version.
+- [ ] Published contributor changes require renewed attestation and preserve history.
+- [ ] Generic story PATCH uses an allow-list (no owner, status, moderation or attestation fields).
 
 ## 8. Audit outcome
 

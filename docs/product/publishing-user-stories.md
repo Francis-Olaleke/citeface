@@ -1,7 +1,7 @@
 # Citeface Publishing User Stories
 
 **Document status:** Product requirements  
-**Version:** 2.0  
+**Version:** 2.1  
 **Last updated:** 4 November 2026  
 **Product:** Citeface
 
@@ -134,6 +134,7 @@ As an authenticated user, I want to view and reopen my saved drafts so that I ca
 - The user cannot retrieve another user's drafts.
 - Drafts are available after signing out and signing back in.
 - Drafts remain private and do not appear in public discovery.
+- Administrators and moderators cannot retrieve another user's drafts.
 
 ### PUB-009 — Edit and resave a draft
 
@@ -181,6 +182,7 @@ As an authenticated user, I want to publish a saved draft when it is ready so th
 - Successful publication changes the post to PUBLISHED.
 - The post becomes accessible according to its selected audience.
 - The system must not create duplicate published posts from repeated requests.
+- At least one contributor is listed and the authorship attestation is recorded before publication.
 
 ## 5. Audience, identity, and research integrity
 
@@ -226,6 +228,9 @@ As an author, I want to provide contributor names, order, and roles so that the 
 - Contributor order can be preserved.
 - Contributor roles can be recorded where supplied.
 - The publishing user attests that they have authority to list the contributors.
+- At least one contributor is required to publish.
+- The attestation is server-generated and linked to the contributor-list version it covers.
+- Changing a published contributor list requires renewed attestation and audit history.
 - Formal co-author approval is not required in the initial MVP.
 
 ### PUB-015 — Display source and research status accurately
@@ -240,6 +245,7 @@ As a reader, I want to distinguish user-provided research information, external 
 - A DOI is not presented as proof of peer review or scientific correctness.
 - A Citeface post is not automatically labelled as a formal scientific publication.
 - Verification status is distinct from scientific validation.
+- Source metadata is visible only to users authorized to view the parent story.
 
 ### PUB-016 — Confirm content-sharing rights
 
@@ -295,18 +301,20 @@ As an author, I want to edit my published post so that I can correct or improve 
 - Unauthorized edits are rejected.
 - The author can change the published post's audience.
 - Any audience change is enforced across all access points and recorded in the audit history.
+- Contributor changes on a published post require renewed attestation and are audited.
 
-### PUB-020 — Remove or archive my published post
+### PUB-020 — Archive my published post
 
 **Priority:** P0
 
-As an author, I want to remove or archive my published post so that I can manage content I no longer want displayed.
+As an author, I want to archive my published post so that I can manage content I no longer want displayed.
 
 **Acceptance criteria:**
-- Only the author or an authorized system role can initiate removal.
-- Removed content is excluded from normal public discovery.
+- Only the author or an authorized system role can initiate archival.
+- Archived content is excluded from normal discovery; authors keep access to their own archived posts.
 - Appropriate historical records and audit information are retained.
-- Removal is distinguishable from retraction.
+- Archival is distinguishable from retraction.
+- Platform moderation removal is a separate moderation action, not an author action.
 
 ### PUB-021 — Correct a published post
 
@@ -360,6 +368,28 @@ As an authorized moderator, I want to review reported content so that I can take
 - Moderation actions are recorded.
 - Appropriate action can be taken under platform rules.
 - Sensitive moderation information is not exposed to ordinary users.
+
+### PUB-030 — Engagement respects story access
+
+**Priority:** P0
+
+As a reader, I want to appreciate, save, comment on and share only stories I am currently authorized to access so that restricted stories stay restricted.
+
+**Acceptance criteria:**
+- Reactions, saves and comments require current access to the parent story.
+- Saved entries and notification previews never return restricted content after access is revoked.
+- Commenting does not change the story's audience.
+
+### PUB-031 — Share a story without bypassing its audience
+
+**Priority:** P0
+
+As a reader, I want to share a story link so that others can reach it according to the story's audience.
+
+**Acceptance criteria:**
+- Public stories can be shared with anyone, including signed-out visitors.
+- Links, previews and media for restricted stories preserve current access rules.
+- Previews of restricted stories expose no title, summary, author or media.
 
 ## 9. Deferred and out-of-scope stories
 
@@ -425,6 +455,9 @@ The first Citeface MVP must support:
 - Visible corrections and retractions.
 - Content reporting and basic moderation.
 - Appropriate audit records.
+- Versioned contributor attestation.
+- Sharing that preserves audience rules.
+- Engagement (reactions, saves, comments) that respects story access.
 
 The first MVP does not require scheduled publishing, collaborative editing, external draft review, advanced video editing, or AI-assisted writing.
 

@@ -117,6 +117,11 @@ Proposed fields:
 - updatedAt
 - publishedAt (nullable)
 - archivedAt (nullable)
+- retractedAt (nullable)
+- moderationState (NONE, HIDDEN, REMOVED; default NONE)
+- rightsConfirmedAt (nullable, server-generated)
+- rightsPolicyVersion (nullable)
+- currentContributorListVersionId (nullable)
 
 Supported content types:
 
@@ -130,9 +135,10 @@ Supported publication states:
 
 - DRAFT
 - PUBLISHED
-- REMOVED
+- ARCHIVED
+- RETRACTED
 
-Additional correction or retraction status must be represented clearly and must not be confused with ordinary removal or archival.
+ARCHIVED is an author action that removes a post from normal discovery while retaining history. RETRACTED is a distinct, visible status and is never an ordinary deletion. REMOVED is not a publication state: platform moderation hiding or removal is a separate moderationState field (NONE, HIDDEN, REMOVED) so it cannot be confused with archival or retraction (see ADR-0002, proposed).
 
 Audience must be a required publication property with the following supported values:
 
@@ -159,7 +165,7 @@ Requirements:
 - Required publication fields are validated before publishing, not necessarily when saving an incomplete draft.
 - Only PUBLISHED posts may enter public or audience-authorized discovery systems.
 - PUBLISHED posts must obey their selected audience.
-- REMOVED posts must not appear in ordinary discovery.
+- ARCHIVED posts, and posts whose moderationState is HIDDEN or REMOVED, must not appear in ordinary discovery.
 - Archived posts retain appropriate audit history.
 - A published post must have a valid publication timestamp.
 - DOI and source URL remain nullable.
@@ -384,27 +390,55 @@ Requirements:
 
 ## 5. Research authorship and provenance
 
-### 5.1 PostContributor
+### 5.1 Contributors, authorship attestation and rights confirmation
 
-Represents contributors associated with a research post.
+Contributor lists are versioned so that an attestation always refers to the exact list the publisher approved. Table names are logical; map them to the actual Prisma schema.
 
-Proposed fields:
+**ContributorListVersion**
 
 - id
 - postId
+- versionNumber
+- createdByUserId
+- createdAt
+
+**PostContributor**
+
+- id
+- contributorListVersionId
 - displayName
 - role
-- position
+- position (unique within a contributor-list version)
 - affiliation (optional)
+- profileUserId (optional)
 - createdAt
-- updatedAt
+
+**AuthorshipAttestation** (append-only)
+
+- id
+- postId
+- publisherUserId (server-set)
+- contributorListVersionId
+- attestedAt (server-generated)
+- policyVersion
+
+**RightsConfirmation** (append-only; may share a UI step with the attestation)
+
+- id
+- postId
+- publisherUserId (server-set)
+- confirmedAt (server-generated)
+- policyVersion
 
 Requirements:
 
-- Contributor order must be preserved.
-- The publishing user attests that they have authority to list the named contributors.
-- Contributor approval workflows are deferred from the initial MVP.
+- At least one contributor is required before publication.
+- Contributor order is preserved and unique within a version.
+- The publishing user attests that they are authorized to submit the story and list the named contributors. This is not individual co-author approval, which is deferred from the initial MVP.
+- The server, not the client, sets the publisher, timestamp and policy version.
+- Changing a published post's contributor list creates a new version, requires renewed attestation and is recorded as an AuditEvent. Earlier versions and attestations are never altered or deleted.
 - Contributor information must be clearly distinguishable from verified identity.
+- The publishing user confirms they hold the rights and permissions for submitted material; the confirmation is recorded separately from the attestation.
 
 ### 5.2 ResearchWorkReference
 
@@ -430,6 +464,7 @@ Requirements:
 - The author must confirm imported metadata before publication.
 - Imported metadata must not automatically be treated as verified.
 - Source information must not imply scientific validity.
+- Source details are visible only to users authorized to view the parent post and must not leak restricted post information.
 
 ### 5.3 AffiliationRecord
 
@@ -639,7 +674,8 @@ Unpublished or confidential research must not be sent to external AI providers w
 - User has many Reactions.
 - User has many Comments.
 - User has many SavedPost records.
-- ResearchPost has many PostContributor records.
+- ResearchPost has many ContributorListVersion records; each version has many PostContributor records.
+- ResearchPost has many AuthorshipAttestation and RightsConfirmation records; each attestation references one ContributorListVersion.
 - ResearchPost has many ResearchWorkReference records.
 - User may have multiple AffiliationRecords.
 - User may have multiple VerificationRecords.
@@ -682,7 +718,7 @@ Before a draft transitions to PUBLISHED, the backend must validate:
 - Required title and content fields for the selected content type.
 - Valid content type.
 - Valid audience selection.
-- Contributor information and author attestation where applicable.
+- At least one contributor, and a valid server-generated authorship attestation bound to the current contributor-list version.
 - DOI and source confirmation where provided.
 - Media type and media readiness.
 - Video duration of 90–300 seconds inclusive.
@@ -702,7 +738,8 @@ Publication states:
 
 - DRAFT
 - PUBLISHED
-- REMOVED
+- ARCHIVED
+- RETRACTED
 
 Media upload states:
 
@@ -740,6 +777,9 @@ A post requiring media must not be published until all required media is READY a
 - Audience changes must be recorded as AuditEvent records, including the actor, affected post, previous audience, new audience and timestamp.
 - Audience changes must immediately affect feeds, profiles, search, recommendations, direct access, APIs, notifications, media delivery and caches.
 - Restricted content must not leak through database joins, aggregations, search indexes, previews or cached responses.
+- publicationState, mediaUploadState and moderationState are separate fields and must not be overloaded.
+- AuthorshipAttestation, RightsConfirmation and historical ContributorListVersion records are immutable.
+- Comments, reactions, saves, notification previews and shared-link previews must re-check the viewer's current access to the parent post.
 
 ---
 
@@ -777,6 +817,12 @@ The following technical details remain open and must be resolved before the rele
 8. Draft deletion and media-retention policy.
 9. Draft autosave behaviour and conflict handling across multiple sessions.
 10. Draft expiration or retention policy, if any.
+11. What viewers see for a retracted post, and who besides the author may retract.
+12. Treatment of posts whose author account is suspended or deleted.
+13. Retention and deletion of archived and retracted posts and their media.
+14. Unauthorized-response convention (404 versus 401) and saved-list behaviour after access is revoked.
+
+Items 11 to 14 and the lifecycle vocabulary are proposed in ADR-0002 and need product-owner approval.
 
 The audience options and access semantics are already decided in ADR-0001 and must not be reopened during implementation without an explicit product decision.
 
