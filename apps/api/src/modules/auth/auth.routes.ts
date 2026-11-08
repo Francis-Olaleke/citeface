@@ -10,7 +10,26 @@ import { loginSchema, registerSchema } from "./auth.schemas.js";
 
 const authRoutes: FastifyPluginAsync = async (app) => {
   // Register a new account.
-  app.post("/register", { schema: registerSchema }, async (request, reply) => {
+  app.post(
+  "/register",
+  {
+    schema: registerSchema,
+    preValidation: async (request) => {
+      const body = request.body as {
+        email?: string;
+        username?: string;
+      };
+
+      if (typeof body.email === "string") {
+        body.email = body.email.trim();
+      }
+
+      if (typeof body.username === "string") {
+        body.username = body.username.trim();
+      }
+    },
+  },
+  async (request, reply) => {
     const body = request.body as {
       email: string;
       password: string;

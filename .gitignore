@@ -12,3 +12,4 @@ node_modules/
 
 # TypeScript build information
 *.tsbuildinfo
+cookies.txt

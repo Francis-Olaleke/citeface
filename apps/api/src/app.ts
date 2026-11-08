@@ -9,7 +9,14 @@ export async function buildApp(
 ) {
   const { logger = true, disconnectOnClose = true } = opts;
 
-  const app = Fastify({ logger });
+const app = Fastify({
+  logger,
+  ajv: {
+    customOptions: {
+      removeAdditional: false,
+    },
+  },
+});
 
   await app.register(cookie);
 
