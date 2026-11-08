@@ -1,5 +1,8 @@
-import { registerUser } from "../services/auth";
-import { useState } from "react";
+
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 
 function Register() {
   const [displayName, setDisplayName] = useState("");
@@ -7,33 +10,43 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  
-async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  if (password !== confirmPassword) {
-    alert("Passwords do not match.");
-    return;
-  }
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-  try {
-    const response = await registerUser({
-      displayName,
-      username,
-      email,
-      password,
-    });
+    setError(null);
 
-    alert(`Welcome to Citeface, ${response.user.displayName}!`);
-  } catch (error) {
-    if (error instanceof Error) {
-      alert(error.message);
-    } else {
-      alert("Registration failed. Please try again.");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await register({
+        displayName: displayName.trim(),
+        username: username.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
     }
   }
-}
 
   return (
     <main>
@@ -52,8 +65,10 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
             placeholder="Enter your full name"
+            autoComplete="name"
             required
             minLength={2}
+            disabled={submitting}
           />
         </div>
 
@@ -65,9 +80,11 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             placeholder="Choose a username"
+            autoComplete="username"
             required
             minLength={3}
             pattern="[a-zA-Z0-9_]+"
+            disabled={submitting}
           />
         </div>
 
@@ -79,7 +96,9 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
+            autoComplete="email"
             required
+            disabled={submitting}
           />
         </div>
 
@@ -91,8 +110,10 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Create a password"
+            autoComplete="new-password"
             required
             minLength={8}
+            disabled={submitting}
           />
         </div>
 
@@ -104,15 +125,25 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="Enter your password again"
+            autoComplete="new-password"
             required
+            disabled={submitting}
           />
         </div>
 
-        <button type="submit">Create account</button>
+        {error && (
+          <p role="alert" aria-live="polite">
+            {error}
+          </p>
+        )}
+
+        <button type="submit" disabled={submitting}>
+          {submitting ? "Creating account..." : "Create account"}
+        </button>
       </form>
 
       <p>
-        Already have an account? <a href="/login">Sign in</a>
+        Already have an account? <Link to="/login">Sign in</Link>
       </p>
     </main>
   );

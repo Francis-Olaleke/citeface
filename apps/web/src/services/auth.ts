@@ -25,13 +25,38 @@ export interface LoginData {
   password: string;
 }
 
+export class AuthServiceError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AuthServiceError";
+    this.status = status;
+  }
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
+  let data: Record<string, unknown> = {};
+
+  try {
+    const result: unknown = await response.json();
+
+    if (typeof result === "object" && result !== null) {
+      data = result as Record<string, unknown>;
+    }
+  } catch {
+    // Handle empty or non-JSON responses.
+  }
 
   if (!response.ok) {
-    throw new Error(
-      data.message || data.error || "Something went wrong."
-    );
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Something went wrong. Please try again.";
+
+    throw new AuthServiceError(message, response.status);
   }
 
   return data as T;

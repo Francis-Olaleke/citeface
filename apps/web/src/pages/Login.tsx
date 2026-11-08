@@ -1,32 +1,39 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { loginUser } from "../services/auth";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    setError(null);
+    setSubmitting(true);
+
     try {
-      await loginUser({
-        email,
+      await login({
+        email: email.trim(),
         password,
       });
 
-      alert("Login successful! Welcome to Citeface.");
-
-      navigate("/dashboard");
-    } catch (error) {
-      if (error instanceof Error) {
-        alert(error.message);
-      } else {
-        alert("Login failed. Please try again.");
-      }
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -47,7 +54,9 @@ function Login() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
+            autoComplete="email"
             required
+            disabled={submitting}
           />
         </div>
 
@@ -59,15 +68,25 @@ function Login() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter your password"
+            autoComplete="current-password"
             required
+            disabled={submitting}
           />
         </div>
 
-        <button type="submit">Sign in</button>
+        {error && (
+          <p role="alert" aria-live="polite">
+            {error}
+          </p>
+        )}
+
+        <button type="submit" disabled={submitting}>
+          {submitting ? "Signing in..." : "Sign in"}
+        </button>
       </form>
 
       <p>
-        Don't have an account? <a href="/register">Create an account</a>
+        Don't have an account? <Link to="/register">Create an account</Link>
       </p>
     </main>
   );
