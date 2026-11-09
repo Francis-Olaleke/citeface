@@ -111,3 +111,36 @@ export async function logoutUser(): Promise<void> {
 
   await handleResponse<{ message: string }>(response);
 }
+
+// Request a password-reset email.
+export async function requestPasswordReset(
+  email: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/forgot-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ email }),
+  });
+
+  return handleResponse<{ message: string }>(response);
+}
+
+// Submit a new password using the reset token.
+export async function resetPassword(
+  token: string,
+  password: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ token, password }),
+  });
+
+  return handleResponse<{ message: string }>(response);
+}

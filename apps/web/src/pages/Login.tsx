@@ -74,6 +74,10 @@ function Login() {
           />
         </div>
 
+                <p>
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
+
         {error && (
           <p role="alert" aria-live="polite">
             {error}

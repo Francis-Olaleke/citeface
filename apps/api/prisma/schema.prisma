@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -150,11 +149,12 @@ model User {
   updatedAt       DateTime   @updatedAt @db.Timestamptz(6)
   deletedAt       DateTime?  @db.Timestamptz(6)
 
-  roles             UserRole[]
-  sessions          Session[]
-  researcherProfile ResearcherProfile?
-  externalIdentities ExternalIdentity[]
-  affiliations      UserAffiliation[]
+  roles               UserRole[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  researcherProfile   ResearcherProfile?
+  externalIdentities  ExternalIdentity[]
+  affiliations        UserAffiliation[]
 
   createdStories ResearchStory[] @relation("StoryCreator")
   storyVersions  StoryVersion[]  @relation("VersionCreator")
@@ -165,24 +165,24 @@ model User {
 
   followedTopics UserTopicFollow[]
 
-  reactions StoryReaction[]
-  comments  Comment[]
-  questions Question[]
+  reactions  StoryReaction[]
+  comments   Comment[]
+  questions  Question[]
   savedItems SavedItem[]
-  shares    ShareEvent[]
+  shares     ShareEvent[]
 
   uploadedMedia MediaAsset[]
 
-  reportsSubmitted ContentReport[] @relation("ReportSubmitter")
-  reportedContent  ContentReport[] @relation("ReportedUser")
-  moderationActions ModerationAction[] @relation("Moderator")
-  correctionsSubmitted Correction[] @relation("CorrectionSubmitter")
-  retractionsInitiated Retraction[] @relation("RetractionInitiator")
+  reportsSubmitted     ContentReport[]    @relation("ReportSubmitter")
+  reportedContent      ContentReport[]    @relation("ReportedUser")
+  moderationActions    ModerationAction[] @relation("Moderator")
+  correctionsSubmitted Correction[]       @relation("CorrectionSubmitter")
+  retractionsInitiated Retraction[]       @relation("RetractionInitiator")
 
-  notifications Notification[] @relation("NotificationRecipient")
+  notifications  Notification[]  @relation("NotificationRecipient")
   consentRecords ConsentRecord[]
-  productEvents ProductEvent[]
-  auditEvents AuditEvent[] @relation("AuditActor")
+  productEvents  ProductEvent[]
+  auditEvents    AuditEvent[]    @relation("AuditActor")
 
   @@index([status])
   @@index([createdAt])
@@ -201,12 +201,12 @@ model UserRole {
 }
 
 model Session {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  tokenHash String   @unique
-  expiresAt DateTime @db.Timestamptz(6)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
   revokedAt DateTime? @db.Timestamptz(6)
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -219,19 +219,19 @@ model Session {
 // -----------------------------------------------------
 
 model ResearcherProfile {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @unique @db.Uuid
-  headline    String?
-  biography   String?  @db.Text
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @db.Uuid
+  headline        String?
+  biography       String?  @db.Text
   profileImageUrl String?
   coverImageUrl   String?
-  country     String?
-  city        String?
-  websiteUrl  String?
-  orcidId     String?  @unique
-  isVerified  Boolean  @default(false)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  country         String?
+  city            String?
+  websiteUrl      String?
+  orcidId         String?  @unique
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -255,17 +255,17 @@ model Affiliation {
 }
 
 model UserAffiliation {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @db.Uuid
-  affiliationId  String   @db.Uuid
-  position       String?
-  department     String?
-  isPrimary      Boolean  @default(false)
-  startDate      DateTime? @db.Date
-  endDate        DateTime? @db.Date
-  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  affiliationId String    @db.Uuid
+  position      String?
+  department    String?
+  isPrimary     Boolean   @default(false)
+  startDate     DateTime? @db.Date
+  endDate       DateTime? @db.Date
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   affiliation Affiliation @relation(fields: [affiliationId], references: [id], onDelete: Restrict)
 
   @@unique([userId, affiliationId])
@@ -291,19 +291,19 @@ model ExternalIdentity {
 // -----------------------------------------------------
 
 model ResearchStory {
-  id               String   @id @default(uuid()) @db.Uuid
-  creatorId        String   @db.Uuid
+  id               String  @id @default(uuid()) @db.Uuid
+  creatorId        String  @db.Uuid
   title            String
-  slug             String   @unique
-  summary          String   @db.VarChar(500)
-  researchQuestion String?  @db.Text
-  methodology      String?  @db.Text
-  findings         String?  @db.Text
-  significance     String?  @db.Text
-  limitations      String?  @db.Text
+  slug             String  @unique
+  summary          String  @db.VarChar(500)
+  researchQuestion String? @db.Text
+  methodology      String? @db.Text
+  findings         String? @db.Text
+  significance     String? @db.Text
+  limitations      String? @db.Text
 
   classification ResearchClassification
-  status         StoryStatus @default(DRAFT)
+  status         StoryStatus            @default(DRAFT)
 
   publishedAt DateTime? @db.Timestamptz(6)
   archivedAt  DateTime? @db.Timestamptz(6)
@@ -321,16 +321,16 @@ model ResearchStory {
   media    StoryMedia[]
   topics   StoryTopic[]
 
-  reactions StoryReaction[]
-  comments  Comment[]
-  questions Question[]
+  reactions  StoryReaction[]
+  comments   Comment[]
+  questions  Question[]
   savedItems SavedItem[]
-  shares ShareEvent[]
+  shares     ShareEvent[]
 
   corrections Correction[]
-  retraction Retraction?
+  retraction  Retraction?
 
-  reports ContentReport[]
+  reports           ContentReport[]
   moderationActions ModerationAction[]
 
   @@index([creatorId])
@@ -340,22 +340,22 @@ model ResearchStory {
 }
 
 model StoryVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  storyId     String   @db.Uuid
-  versionNumber Int
-  title       String
-  summary     String   @db.VarChar(500)
-  researchQuestion String? @db.Text
-  methodology String?  @db.Text
-  findings    String?  @db.Text
-  significance String? @db.Text
-  limitations String?  @db.Text
-  changeNote  String?  @db.Text
-  createdById String?  @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  id               String   @id @default(uuid()) @db.Uuid
+  storyId          String   @db.Uuid
+  versionNumber    Int
+  title            String
+  summary          String   @db.VarChar(500)
+  researchQuestion String?  @db.Text
+  methodology      String?  @db.Text
+  findings         String?  @db.Text
+  significance     String?  @db.Text
+  limitations      String?  @db.Text
+  changeNote       String?  @db.Text
+  createdById      String?  @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
 
-  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  createdBy User? @relation("VersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  story     ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdBy User?         @relation("VersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([storyId, versionNumber])
   @@index([createdById])
@@ -374,7 +374,7 @@ model StoryAuthor {
   createdAt       DateTime        @default(now()) @db.Timestamptz(6)
 
   story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  user User? @relation("AuthorAccount", fields: [userId], references: [id], onDelete: SetNull)
+  user  User?         @relation("AuthorAccount", fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([storyId, sortOrder])
   @@index([userId])
@@ -408,23 +408,23 @@ model StorySource {
 // -----------------------------------------------------
 
 model MediaAsset {
-  id           String    @id @default(uuid()) @db.Uuid
-  uploadedById String    @db.Uuid
-  type         MediaType
-  storageKey   String    @unique
+  id              String    @id @default(uuid()) @db.Uuid
+  uploadedById    String    @db.Uuid
+  type            MediaType
+  storageKey      String    @unique
   storageProvider String
-  originalName String
-  mimeType     String
-  sizeBytes    BigInt
-  width        Int?
-  height       Int?
+  originalName    String
+  mimeType        String
+  sizeBytes       BigInt
+  width           Int?
+  height          Int?
   durationSeconds Int?
-  checksum     String?
-  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
-  deletedAt    DateTime? @db.Timestamptz(6)
+  checksum        String?
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  deletedAt       DateTime? @db.Timestamptz(6)
 
-  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
-  stories StoryMedia[]
+  uploadedBy User         @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  stories    StoryMedia[]
 
   @@index([uploadedById])
   @@index([type])
@@ -439,7 +439,7 @@ model StoryMedia {
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
 
   story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  media MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  media MediaAsset    @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
 
   @@unique([storyId, mediaAssetId])
   @@index([mediaAssetId])
@@ -456,7 +456,7 @@ model Topic {
   description String?  @db.Text
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
 
-  stories StoryTopic[]
+  stories   StoryTopic[]
   followers UserTopicFollow[]
 
   @@index([name])
@@ -469,17 +469,17 @@ model StoryTopic {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  topic Topic         @relation(fields: [topicId], references: [id], onDelete: Restrict)
 
   @@unique([storyId, topicId])
   @@index([topicId])
 }
 
 model UserFollow {
-  id          String   @id @default(uuid()) @db.Uuid
-  followerId  String   @db.Uuid
-  followedId  String   @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  id         String   @id @default(uuid()) @db.Uuid
+  followerId String   @db.Uuid
+  followedId String   @db.Uuid
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
 
   follower User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
   followed User @relation("UserFollowers", fields: [followedId], references: [id], onDelete: Cascade)
@@ -494,7 +494,7 @@ model UserTopicFollow {
   topicId   String   @db.Uuid
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([userId, topicId])
@@ -512,7 +512,7 @@ model StoryReaction {
   type      ReactionType @default(APPRECIATE)
   createdAt DateTime     @default(now()) @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storyId, type])
@@ -520,19 +520,19 @@ model StoryReaction {
 }
 
 model Comment {
-  id        String   @id @default(uuid()) @db.Uuid
-  storyId   String   @db.Uuid
-  authorId  String   @db.Uuid
-  parentId  String?  @db.Uuid
-  body      String   @db.Text
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  id        String    @id @default(uuid()) @db.Uuid
+  storyId   String    @db.Uuid
+  authorId  String    @db.Uuid
+  parentId  String?   @db.Uuid
+  body      String    @db.Text
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
   deletedAt DateTime? @db.Timestamptz(6)
 
-  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  story  ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
-  parent Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
   replies Comment[] @relation("CommentReplies")
 
   reports ContentReport[]
@@ -543,16 +543,16 @@ model Comment {
 }
 
 model Question {
-  id        String   @id @default(uuid()) @db.Uuid
-  storyId   String   @db.Uuid
-  authorId  String   @db.Uuid
-  body      String   @db.Text
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  id        String    @id @default(uuid()) @db.Uuid
+  storyId   String    @db.Uuid
+  authorId  String    @db.Uuid
+  body      String    @db.Text
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
   deletedAt DateTime? @db.Timestamptz(6)
 
-  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  story  ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   reports ContentReport[]
 
@@ -566,7 +566,7 @@ model SavedItem {
   storyId   String   @db.Uuid
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storyId])
@@ -580,7 +580,7 @@ model ShareEvent {
   platform  String?
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@index([storyId, createdAt])
@@ -591,17 +591,17 @@ model ShareEvent {
 // -----------------------------------------------------
 
 model Notification {
-  id          String           @id @default(uuid()) @db.Uuid
-  recipientId String           @db.Uuid
-  type        NotificationType
-  title       String
-  body        String?          @db.Text
+  id           String           @id @default(uuid()) @db.Uuid
+  recipientId  String           @db.Uuid
+  type         NotificationType
+  title        String
+  body         String?          @db.Text
   resourceType String?
-  resourceId  String?          @db.Uuid
-  readAt      DateTime?        @db.Timestamptz(6)
-  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+  resourceId   String?          @db.Uuid
+  readAt       DateTime?        @db.Timestamptz(6)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(6)
 
-  recipient User @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient  User                   @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   deliveries NotificationDelivery[]
 
   @@index([recipientId, createdAt])
@@ -609,12 +609,12 @@ model Notification {
 }
 
 model NotificationDelivery {
-  id             String   @id @default(uuid()) @db.Uuid
-  notificationId String   @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  notificationId String    @db.Uuid
   channel        String
   status         String
   deliveredAt    DateTime? @db.Timestamptz(6)
-  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
 
   notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
 
@@ -626,24 +626,24 @@ model NotificationDelivery {
 // -----------------------------------------------------
 
 model ContentReport {
-  id          String           @id @default(uuid()) @db.Uuid
-  reporterId  String           @db.Uuid
-  targetType  ReportTargetType
-  storyId     String?          @db.Uuid
-  commentId   String?          @db.Uuid
-  questionId  String?          @db.Uuid
-  reportedUserId String?       @db.Uuid
-  reason      String
-  details     String?          @db.Text
-  status      ReportStatus    @default(PENDING)
-  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime        @updatedAt @db.Timestamptz(6)
+  id             String           @id @default(uuid()) @db.Uuid
+  reporterId     String           @db.Uuid
+  targetType     ReportTargetType
+  storyId        String?          @db.Uuid
+  commentId      String?          @db.Uuid
+  questionId     String?          @db.Uuid
+  reportedUserId String?          @db.Uuid
+  reason         String
+  details        String?          @db.Text
+  status         ReportStatus     @default(PENDING)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(6)
 
-  reporter       User            @relation("ReportSubmitter", fields: [reporterId], references: [id], onDelete: Restrict)
-  reportedUser   User?           @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Restrict)
-  story          ResearchStory?  @relation(fields: [storyId], references: [id], onDelete: Restrict)
-  comment        Comment?        @relation(fields: [commentId], references: [id], onDelete: Restrict)
-  question       Question?       @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  reporter          User               @relation("ReportSubmitter", fields: [reporterId], references: [id], onDelete: Restrict)
+  reportedUser      User?              @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  story             ResearchStory?     @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  comment           Comment?           @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  question          Question?          @relation(fields: [questionId], references: [id], onDelete: Restrict)
   moderationActions ModerationAction[] @relation("ReportModerationActions")
 
   @@index([status, createdAt])
@@ -663,7 +663,7 @@ model ModerationAction {
   reason      String?              @db.Text
   createdAt   DateTime             @default(now()) @db.Timestamptz(6)
 
-  moderator User @relation("Moderator", fields: [moderatorId], references: [id], onDelete: Restrict)
+  moderator User           @relation("Moderator", fields: [moderatorId], references: [id], onDelete: Restrict)
   story     ResearchStory? @relation(fields: [storyId], references: [id], onDelete: Restrict)
   report    ContentReport? @relation("ReportModerationActions", fields: [reportId], references: [id], onDelete: Restrict)
 
@@ -673,32 +673,32 @@ model ModerationAction {
 }
 
 model Correction {
-  id          String           @id @default(uuid()) @db.Uuid
-  storyId     String           @db.Uuid
-  submittedById String         @db.Uuid
-  description String           @db.Text
-  status      CorrectionStatus @default(SUBMITTED)
-  resolutionNote String?       @db.Text
-  resolvedAt  DateTime?        @db.Timestamptz(6)
-  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+  id             String           @id @default(uuid()) @db.Uuid
+  storyId        String           @db.Uuid
+  submittedById  String           @db.Uuid
+  description    String           @db.Text
+  status         CorrectionStatus @default(SUBMITTED)
+  resolutionNote String?          @db.Text
+  resolvedAt     DateTime?        @db.Timestamptz(6)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
 
-  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Restrict)
-  submittedBy User @relation("CorrectionSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  story       ResearchStory @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  submittedBy User          @relation("CorrectionSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
 
   @@index([storyId, createdAt])
   @@index([status])
 }
 
 model Retraction {
-  id          String   @id @default(uuid()) @db.Uuid
-  storyId     String   @unique @db.Uuid
-  initiatedById String @db.Uuid
-  reason      String   @db.Text
-  notice      String?  @db.Text
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  id            String   @id @default(uuid()) @db.Uuid
+  storyId       String   @unique @db.Uuid
+  initiatedById String   @db.Uuid
+  reason        String   @db.Text
+  notice        String?  @db.Text
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
 
-  story ResearchStory @relation(fields: [storyId], references: [id], onDelete: Restrict)
-  initiatedBy User @relation("RetractionInitiator", fields: [initiatedById], references: [id], onDelete: Restrict)
+  story       ResearchStory @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  initiatedBy User          @relation("RetractionInitiator", fields: [initiatedById], references: [id], onDelete: Restrict)
 }
 
 // -----------------------------------------------------
@@ -745,4 +745,18 @@ model AuditEvent {
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
   @@index([createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }

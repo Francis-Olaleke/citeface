@@ -1,3 +1,8 @@
+import {
+  requestPasswordReset,
+  resetPassword,
+} from "./password-reset.service.js";
+
 import type { FastifyPluginAsync } from "fastify";
 import {
   authenticateUser,
@@ -100,6 +105,87 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       user,
     };
   });
+
+    // Request a password-reset email.
+  app.post(
+    "/forgot-password",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["email"],
+          additionalProperties: false,
+          properties: {
+            email: { type: "string", format: "email", maxLength: 254 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body as { email: string };
+
+      try {
+        await requestPasswordReset(body.email);
+      } catch (error) {
+        request.log.error(
+          { err: error },
+          "Password reset request could not be processed.",
+        );
+      }
+
+      // Always return the same response to avoid revealing account existence.
+      return reply.code(200).send({
+        message:
+          "If an account exists with that email, password reset instructions will be sent.",
+      });
+    },
+  );
+
+  // Reset a password using a valid, unused reset token.
+  app.post(
+    "/reset-password",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["token", "password"],
+          additionalProperties: false,
+          properties: {
+            token: {
+              type: "string",
+              pattern: "^[a-f0-9]{64}$",
+            },
+            password: {
+              type: "string",
+              minLength: 8,
+              maxLength: 128,
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body as {
+        token: string;
+        password: string;
+      };
+
+      const success = await resetPassword(body.token, body.password);
+
+      if (!success) {
+        return reply.code(400).send({
+          error: "This password reset link is invalid or has expired.",
+        });
+      }
+
+      reply.clearCookie("citeface_session", { path: "/" });
+
+      return reply.code(200).send({
+        message:
+          "Your password has been reset successfully. Please log in with your new password.",
+      });
+    },
+  );
 
   // Get the currently authenticated user.
   app.get("/me", async (request, reply) => {
