@@ -439,3 +439,185 @@ input:disabled {
     align-items: flex-start;
   }
 }
+
+/* Discovery feed story cards */
+.story-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.story-card {
+  padding: 20px;
+}
+
+.story-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.story-author {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.story-author-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.story-author-username,
+.story-author-headline {
+  color: #778195;
+  font-size: 12px;
+}
+
+.verified-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #eaf2ff;
+  color: #2864c5;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.story-date {
+  color: #8992a2;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.story-meta {
+  margin-bottom: 10px;
+}
+
+.story-classification,
+.story-media-type {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #eef3fb;
+  color: #385b91;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.story-title {
+  margin: 0 0 10px;
+  color: #17243a;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.story-summary {
+  margin: 0;
+  color: #596579;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.story-coauthors {
+  margin: 12px 0 0;
+  color: #778195;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.story-topics,
+.story-media-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.story-topic {
+  padding: 6px 10px;
+  border: 1px solid #e5eaf2;
+  border-radius: 20px;
+  color: #52627a;
+  font-size: 12px;
+}
+
+.story-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #edf0f5;
+  color: #778195;
+  font-size: 12px;
+}
+
+.feed-state {
+  padding: 24px;
+  text-align: center;
+}
+
+.feed-state h3 {
+  margin: 0 0 8px;
+  color: #26344a;
+}
+
+.feed-state p {
+  color: #778195;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.feed-retry-button {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #2459a6;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feed-retry-button:hover {
+  background: #194783;
+}
+
+.feed-retry-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.feed-load-more {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+@media (max-width: 520px) {
+  .story-card {
+    padding: 16px;
+  }
+
+  .story-date {
+    font-size: 10px;
+  }
+
+  .story-title {
+    font-size: 16px;
+  }
+
+  .story-footer {
+    gap: 10px;
+  }
+}
