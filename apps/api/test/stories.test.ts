@@ -10,7 +10,11 @@ import {
 import type { FastifyInstance } from "fastify";
 
 import { prisma } from "../src/plugins/database.js";
-import { makeApp, resetDb } from "./helpers.js";
+import {
+  makeApp,
+  registerAndLogin,
+  resetDb,
+} from "./helpers.js";
 
 let app: FastifyInstance;
 
@@ -96,6 +100,7 @@ describe("F-04 discovery feed", () => {
       url: "/stories/feed",
     });
 
+    
     expect(res.statusCode).toBe(200);
 
     const body = res.json();
@@ -348,3 +353,135 @@ describe("F-04 discovery feed", () => {
     expect(excessiveLimit.statusCode).toBe(400);
   });
 });
+
+
+describe("F-05 research story draft creation", () => {
+  it("rejects draft creation without authentication", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories",
+      payload: {
+        title: "Understanding Malaria Transmission",
+        summary: "A study of malaria transmission patterns.",
+        classification: "RESEARCH_REPORT",
+      },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(await prisma.researchStory.count()).toBe(0);
+  });
+
+  it("creates a private draft for the authenticated user", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "Understanding Malaria Transmission",
+        summary: "A study of malaria transmission patterns.",
+        classification: "RESEARCH_REPORT",
+        researchQuestion: "What factors influence malaria transmission?",
+        methodology: "A descriptive research approach.",
+        findings: "Several transmission factors were identified.",
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+
+    const body = res.json();
+
+    expect(body.story).toMatchObject({
+      creatorId: user.id,
+      title: "Understanding Malaria Transmission",
+      summary: "A study of malaria transmission patterns.",
+      classification: "RESEARCH_REPORT",
+      status: "DRAFT",
+      publishedAt: null,
+    });
+
+    expect(body.story.id).toBeTruthy();
+    expect(body.story.slug).toBeTruthy();
+
+    const storedStory = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: body.story.id },
+    });
+
+    expect(storedStory.creatorId).toBe(user.id);
+    expect(storedStory.status).toBe("DRAFT");
+  });
+
+  it("does not expose a newly created draft in the public feed", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "A Private Research Draft",
+        summary: "This draft must not appear in public discovery.",
+        classification: "RESEARCH_REPORT",
+      },
+    });
+
+    expect(created.statusCode).toBe(201);
+
+    const feed = await app.inject({
+      method: "GET",
+      url: "/stories/feed",
+    });
+
+    expect(feed.statusCode).toBe(200);
+    expect(feed.json().stories).toHaveLength(0);
+  });
+
+  it("rejects a creatorId supplied in the request body", async () => {
+    const { cookie } = await registerAndLogin(app, 1);
+    const secondUser = await registerAndLogin(app, 2);
+
+    const secondUserRecord = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser2" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "Attempted Account Impersonation",
+        summary: "Testing creator ownership protection.",
+        classification: "RESEARCH_REPORT",
+        creatorId: secondUserRecord.id,
+      },
+    });
+
+    expect(secondUser.res.statusCode).toBe(201);
+    expect(res.statusCode).toBe(400);
+    expect(await prisma.researchStory.count()).toBe(0);
+  });
+
+  it("rejects invalid story creation data", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "",
+        summary: "",
+        classification: "INVALID_CLASSIFICATION",
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(await prisma.researchStory.count()).toBe(0);
+  });
+});
+

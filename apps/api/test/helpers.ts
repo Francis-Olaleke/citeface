@@ -53,14 +53,14 @@ export async function registerAndLogin(
   });
 
   const cookie = res.cookies.find(
-    (item) => item.name === "citeface_session",
-  );
+  (item) => item.name === "citeface_session"
+);
 
-  return {
-    payload,
-    res,
-    cookie: cookie
-      ? { citeface_session: cookie.value }
-      : {},
-  };
+const cookies: Record<string, string> = {};
+
+if (cookie) {
+  cookies.citeface_session = cookie.value;
+}
+
+return { payload, res, cookie: cookies };
 }
