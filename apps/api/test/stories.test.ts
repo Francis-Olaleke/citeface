@@ -485,3 +485,318 @@ describe("F-05 research story draft creation", () => {
   });
 });
 
+
+describe("F-05.2 research story draft listing", () => {
+  it("rejects draft listing without authentication", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/drafts",
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns only drafts belonging to the authenticated user", async () => {
+    const firstUser = await registerAndLogin(app, 1);
+    const secondUser = await registerAndLogin(app, 2);
+
+    const firstDraft = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: firstUser.cookie,
+      payload: {
+        title: "First Researcher's Draft",
+        summary: "A private research draft.",
+        classification: "RESEARCH_REPORT",
+      },
+    });
+
+    const secondDraft = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: secondUser.cookie,
+      payload: {
+        title: "Second Researcher's Draft",
+        summary: "Another private research draft.",
+        classification: "RESEARCH_REPORT",
+      },
+    });
+
+    expect(firstDraft.statusCode).toBe(201);
+    expect(secondDraft.statusCode).toBe(201);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/drafts",
+      cookies: firstUser.cookie,
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const body = res.json();
+
+    expect(body.drafts).toHaveLength(1);
+    expect(body.drafts[0].title).toBe(
+      "First Researcher's Draft",
+    );
+    expect(body.drafts[0].status).toBe("DRAFT");
+    expect(body.drafts[0].publishedAt).toBeNull();
+    expect(body.drafts[0].researchQuestion).toBeNull();
+    expect(JSON.stringify(body)).not.toContain("testuser2");
+    expect(JSON.stringify(body)).not.toContain("testuser1@example.com");
+  });
+
+  it("excludes published, archived, retracted and deleted stories", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    await createStory(user.id, {
+      title: "Valid Draft",
+      slug: "valid-draft",
+      status: "DRAFT",
+      publishedAt: null,
+    });
+
+    await createStory(user.id, {
+      title: "Published Story",
+      slug: "published-story",
+      status: "PUBLISHED",
+    });
+
+    await createStory(user.id, {
+      title: "Archived Story",
+      slug: "archived-story",
+      status: "ARCHIVED",
+    });
+
+    await createStory(user.id, {
+      title: "Retracted Story",
+      slug: "retracted-story",
+      status: "RETRACTED",
+    });
+
+    await createStory(user.id, {
+      title: "Deleted Draft",
+      slug: "deleted-draft",
+      status: "DRAFT",
+      publishedAt: null,
+      deletedAt: new Date(),
+    });
+
+    await createStory(user.id, {
+      title: "Draft With Publication Date",
+      slug: "draft-with-publication-date",
+      status: "DRAFT",
+      publishedAt: new Date(),
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/drafts",
+      cookies: cookie,
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const body = res.json();
+
+    expect(body.drafts).toHaveLength(1);
+    expect(body.drafts[0].title).toBe("Valid Draft");
+  });
+});
+
+describe("F-05.3 research story draft editing", () => {
+  it("rejects editing without authentication", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/stories/00000000-0000-4000-8000-000000000001",
+      payload: { title: "Updated title" },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("allows the owner to edit a draft and preserves its previous version", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "Original Research Title",
+        summary: "Original research summary.",
+        classification: "RESEARCH_REPORT",
+        methodology: "Original methodology.",
+      },
+    });
+
+    expect(created.statusCode).toBe(201);
+
+    const storyId = created.json().story.id;
+
+    const updated = await app.inject({
+      method: "PATCH",
+      url: `/stories/${storyId}`,
+      cookies: cookie,
+      payload: {
+        title: "Updated Research Title",
+        summary: "Updated research summary.",
+        changeNote: "Corrected the research title and summary.",
+      },
+    });
+
+    expect(updated.statusCode).toBe(200);
+
+    expect(updated.json().story).toMatchObject({
+      id: storyId,
+      title: "Updated Research Title",
+      summary: "Updated research summary.",
+      methodology: "Original methodology.",
+      status: "DRAFT",
+    });
+
+    const versions = await prisma.storyVersion.findMany({
+      where: { storyId },
+    });
+
+    expect(versions).toHaveLength(1);
+    expect(versions[0]).toMatchObject({
+      versionNumber: 1,
+      title: "Original Research Title",
+      summary: "Original research summary.",
+      methodology: "Original methodology.",
+      changeNote: "Corrected the research title and summary.",
+    });
+  });
+
+  it("prevents another researcher from editing someone else's draft", async () => {
+    const firstUser = await registerAndLogin(app, 1);
+    const secondUser = await registerAndLogin(app, 2);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: firstUser.cookie,
+      payload: {
+        title: "Private Research Draft",
+        summary: "This draft belongs to the first researcher.",
+        classification: "RESEARCH_REPORT",
+      },
+    });
+
+    expect(created.statusCode).toBe(201);
+
+    const storyId = created.json().story.id;
+
+    const updated = await app.inject({
+      method: "PATCH",
+      url: `/stories/${storyId}`,
+      cookies: secondUser.cookie,
+      payload: {
+        title: "Unauthorized Change",
+      },
+    });
+
+    expect(updated.statusCode).toBe(404);
+
+    const stored = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+    });
+
+    expect(stored.title).toBe("Private Research Draft");
+    expect(
+      await prisma.storyVersion.count({ where: { storyId } }),
+    ).toBe(0);
+  });
+
+  it("rejects edits to published, archived, retracted and deleted stories", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const published = await createStory(user.id, {
+      title: "Published Story",
+      slug: "published-edit-test",
+      status: "PUBLISHED",
+    });
+
+    const archived = await createStory(user.id, {
+      title: "Archived Story",
+      slug: "archived-edit-test",
+      status: "ARCHIVED",
+    });
+
+    const retracted = await createStory(user.id, {
+      title: "Retracted Story",
+      slug: "retracted-edit-test",
+      status: "RETRACTED",
+    });
+
+    const deleted = await createStory(user.id, {
+      title: "Deleted Draft",
+      slug: "deleted-edit-test",
+      status: "DRAFT",
+      publishedAt: null,
+      deletedAt: new Date(),
+    });
+
+    for (const story of [published, archived, retracted, deleted]) {
+      const res = await app.inject({
+        method: "PATCH",
+        url: `/stories/${story.id}`,
+        cookies: cookie,
+        payload: { title: "Attempted Edit" },
+      });
+
+      expect(res.statusCode).toBe(404);
+    }
+
+    expect(await prisma.storyVersion.count()).toBe(0);
+  });
+
+  it("supports partial updates without overwriting omitted fields", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "Partial Update Test",
+        summary: "Original summary.",
+        classification: "RESEARCH_REPORT",
+        researchQuestion: "Original research question?",
+        methodology: "Original methodology.",
+      },
+    });
+
+    const storyId = created.json().story.id;
+
+    const updated = await app.inject({
+      method: "PATCH",
+      url: `/stories/${storyId}`,
+      cookies: cookie,
+      payload: {
+        findings: "New findings.",
+      },
+    });
+
+    expect(updated.statusCode).toBe(200);
+
+    expect(updated.json().story).toMatchObject({
+      title: "Partial Update Test",
+      summary: "Original summary.",
+      researchQuestion: "Original research question?",
+      methodology: "Original methodology.",
+      findings: "New findings.",
+    });
+  });
+});
+
+
