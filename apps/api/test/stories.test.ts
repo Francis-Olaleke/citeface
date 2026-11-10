@@ -800,3 +800,250 @@ describe("F-05.3 research story draft editing", () => {
 });
 
 
+describe("F-05.4 research story publishing", () => {
+  const validPublication = {
+    attestation: true,
+    authors: [
+      {
+        displayName: "Dr. Ada Researcher",
+        affiliationText: "LAUTECH",
+        role: "LEAD_AUTHOR",
+        isCorresponding: true,
+      },
+      {
+        displayName: "Francis Olaleke",
+        affiliationText: "Independent Researcher",
+        role: "CO_AUTHOR",
+      },
+    ],
+  };
+
+  async function createDraft(cookie: Record<string, string>) {
+    return app.inject({
+      method: "POST",
+      url: "/stories",
+      cookies: cookie,
+      payload: {
+        title: "Understanding Malaria Transmission",
+        summary: "A study of malaria transmission patterns.",
+        classification: "RESEARCH_REPORT",
+      },
+    });
+  }
+
+  it("rejects publishing without authentication", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/00000000-0000-4000-8000-000000000001/publish",
+      payload: validPublication,
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects publication without a valid attestation", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/stories/${storyId}/publish`,
+      cookies: cookie,
+      payload: {
+        ...validPublication,
+        attestation: false,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+
+    const stored = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+    });
+
+    expect(stored.status).toBe("DRAFT");
+  });
+
+  it("rejects publication without exactly one lead author", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/stories/${storyId}/publish`,
+      cookies: cookie,
+      payload: {
+        attestation: true,
+        authors: [
+          {
+            displayName: "Researcher One",
+            role: "CO_AUTHOR",
+          },
+        ],
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+
+    const stored = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+    });
+
+    expect(stored.status).toBe("DRAFT");
+  });
+
+  it("publishes an owner's draft and saves explicit author attribution", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/stories/${storyId}/publish`,
+      cookies: cookie,
+      payload: validPublication,
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    expect(res.json().story).toMatchObject({
+      id: storyId,
+      status: "PUBLISHED",
+      authors: [
+        {
+          displayName: "Dr. Ada Researcher",
+          affiliationText: "LAUTECH",
+          role: "LEAD_AUTHOR",
+          sortOrder: 0,
+          isCorresponding: true,
+        },
+        {
+          displayName: "Francis Olaleke",
+          affiliationText: "Independent Researcher",
+          role: "CO_AUTHOR",
+          sortOrder: 1,
+          isCorresponding: false,
+        },
+      ],
+    });
+
+    expect(res.json().story.publishedAt).toBeTruthy();
+
+    const stored = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+    });
+
+    expect(stored.status).toBe("PUBLISHED");
+    expect(stored.publishedAt).not.toBeNull();
+
+    expect(
+      await prisma.storyAuthor.count({
+        where: { storyId },
+      }),
+    ).toBe(2);
+  });
+
+  it("prevents another researcher from publishing someone else's draft", async () => {
+    const firstUser = await registerAndLogin(app, 1);
+    const secondUser = await registerAndLogin(app, 2);
+
+    const draft = await createDraft(firstUser.cookie);
+    const storyId = draft.json().story.id;
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/stories/${storyId}/publish`,
+      cookies: secondUser.cookie,
+      payload: validPublication,
+    });
+
+    expect(res.statusCode).toBe(404);
+
+    const stored = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+    });
+
+    expect(stored.status).toBe("DRAFT");
+
+    expect(
+      await prisma.storyAuthor.count({
+        where: { storyId },
+      }),
+    ).toBe(0);
+  });
+
+  it("rejects publishing already published, archived, retracted or deleted stories", async () => {
+    const { cookie } = await registerAndLogin(app);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const published = await createStory(user.id, {
+      slug: "published-publish-test",
+      status: "PUBLISHED",
+    });
+
+    const archived = await createStory(user.id, {
+      slug: "archived-publish-test",
+      status: "ARCHIVED",
+    });
+
+    const retracted = await createStory(user.id, {
+      slug: "retracted-publish-test",
+      status: "RETRACTED",
+    });
+
+    const deleted = await createStory(user.id, {
+      slug: "deleted-publish-test",
+      status: "DRAFT",
+      publishedAt: null,
+      deletedAt: new Date(),
+    });
+
+    for (const story of [published, archived, retracted, deleted]) {
+      const res = await app.inject({
+        method: "POST",
+        url: `/stories/${story.id}/publish`,
+        cookies: cookie,
+        payload: validPublication,
+      });
+
+      expect(res.statusCode).toBe(404);
+    }
+  });
+
+  it("makes a successfully published story available in the public feed", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    const published = await app.inject({
+      method: "POST",
+      url: `/stories/${storyId}/publish`,
+      cookies: cookie,
+      payload: validPublication,
+    });
+
+    expect(published.statusCode).toBe(200);
+
+    // Deliberately make this request without authentication.
+    const feed = await app.inject({
+      method: "GET",
+      url: "/stories/feed",
+    });
+
+    expect(feed.statusCode).toBe(200);
+
+    const story = feed.json().stories.find(
+      (item: { id: string }) => item.id === storyId,
+    );
+
+    expect(story).toBeDefined();
+    expect(story.title).toBe("Understanding Malaria Transmission");
+  });
+});
+
+
