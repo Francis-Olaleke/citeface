@@ -1,0 +1,135 @@
+
+.research-composer {
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.research-composer-header {
+  margin-bottom: 26px;
+}
+
+.research-composer-eyebrow {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.research-composer-header h2 {
+  margin: 0 0 8px;
+}
+
+.research-composer-header p,
+.research-composer-description {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.research-composer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.research-composer-field label {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.research-composer-field input,
+.research-composer-field textarea,
+.research-composer-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #1e293b;
+  font: inherit;
+}
+
+.research-composer-field input:focus,
+.research-composer-field textarea:focus,
+.research-composer-field select:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #2563eb;
+}
+
+.research-composer-field textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.research-composer-field small {
+  color: #64748b;
+  text-align: right;
+}
+
+.research-composer-divider {
+  border-top: 1px solid #e2e8f0;
+  margin: 28px 0;
+}
+
+.research-composer form h3 {
+  margin-bottom: 8px;
+}
+
+.research-composer-description {
+  margin-bottom: 24px;
+}
+
+.research-composer-error {
+  padding: 12px 14px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.research-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.research-composer-cancel,
+.research-composer-submit {
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.research-composer-cancel {
+  background: #fff;
+  border: 1px solid #dbe2ea;
+}
+
+.research-composer-submit {
+  color: #fff;
+  background: #2563eb;
+  border: none;
+}
+
+.research-composer-submit:disabled,
+.research-composer-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .research-composer {
+    padding: 18px;
+  }
+
+  .research-composer-actions {
+    flex-direction: column-reverse;
+  }
+
+  .research-composer-actions button {
+    width: 100%;
+  }
+}

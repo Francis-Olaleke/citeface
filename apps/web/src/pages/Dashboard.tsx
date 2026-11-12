@@ -2,11 +2,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import MyDrafts from "../components/MyDrafts";
+import ResearchDraftEditor from "../components/ResearchDraftEditor";
+import ResearchStoryComposer from "../components/ResearchStoryComposer";
+
 import { useAuth } from "../context/AuthContext";
+
 import {
   getStoriesFeed,
   type FeedStory,
+  type DraftStory,
 } from "../services/stories";
+
 import "./dashboard.css";
 
 function getInitials(name: string) {
@@ -144,7 +151,11 @@ function StoryCard({ story }: { story: FeedStory }) {
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
+  const [selectedDraft, setSelectedDraft] =
+  useState<DraftStory | null>(null);
+  const [showStoryComposer, setShowStoryComposer] = useState(false);
+ 
+  useState<DraftStory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -155,7 +166,8 @@ function Dashboard() {
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [refreshFeed, setRefreshFeed] = useState(0);
-
+  const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
+  
   const initials = getInitials(user?.displayName ?? "C");
 
   useEffect(() => {
@@ -350,31 +362,78 @@ function Dashboard() {
               people shaping the future.
             </p>
           </section>
+                  <MyDrafts
+  onOpenDraft={(draft) => setSelectedDraft(draft)}
+  refreshKey={draftsRefreshKey}
+/>
+          {selectedDraft && (
+  <ResearchDraftEditor
+    draft={selectedDraft}
+    onClose={() => setSelectedDraft(null)}
+    onSaved={(story) => setSelectedDraft(story)}
+    onPublished={() => {
+      setSelectedDraft(null);
+      setRefreshFeed((current) => current + 1);
+      setDraftsRefreshKey((current) => current + 1);
+    }}
+  />
+)}
 
-          <section className="panel composer">
-            <div className="composer-top">
-              <div className="profile-avatar">{initials}</div>
-              <div className="composer-placeholder">
-                What research or idea would you like to share?
-              </div>
-            </div>
+{showStoryComposer ? (
+  <ResearchStoryComposer
+    onCreated={(draft) => {
+      setShowStoryComposer(false);
+      setSelectedDraft(draft);
+    }}
+    onCancel={() => setShowStoryComposer(false)}
+  />
+) : (
+  <section className="panel composer">
+    <div className="composer-top">
+      <div className="profile-avatar">{initials}</div>
+      <div
+        className="composer-placeholder"
+        onClick={() => setShowStoryComposer(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            setShowStoryComposer(true);
+          }
+        }}
+      >
+        What research or idea would you like to share?
+      </div>
+    </div>
 
-            <div className="composer-actions">
-              <button className="composer-action" type="button" disabled>
-                ▷ Video
-              </button>
-              <button className="composer-action" type="button" disabled>
-                ▧ Image / Slides
-              </button>
-              <button className="composer-action" type="button" disabled>
-                ▤ Research Story
-              </button>
-            </div>
+    <div className="composer-actions">
+      <button
+        className="composer-action"
+        type="button"
+        disabled
+      >
+        ▷ Video
+      </button>
 
-            <span className="coming-soon-label">
-              Research publishing is coming soon.
-            </span>
-          </section>
+      <button
+        className="composer-action"
+        type="button"
+        disabled
+      >
+        ▧ Image / Slides
+      </button>
+
+      <button
+        className="composer-action"
+        type="button"
+        onClick={() => setShowStoryComposer(true)}
+      >
+        ▤ Research Story
+      </button>
+    </div>
+  </section>
+)}
+
 
           <div className="feed-heading">
             <h2>Discover research</h2>

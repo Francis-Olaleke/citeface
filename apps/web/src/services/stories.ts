@@ -121,3 +121,238 @@ export async function getStoriesFeed(
 
   return data as unknown as StoriesFeedResponse;
 }
+
+export interface DraftStory {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  classification: string;
+  researchQuestion: string | null;
+  methodology: string | null;
+  findings: string | null;
+  significance: string | null;
+  limitations: string | null;
+  status: "DRAFT";
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MyDraftsResponse {
+  drafts: DraftStory[];
+}
+
+export async function getMyDrafts(): Promise<MyDraftsResponse> {
+  const response = await fetch(`${API_URL}/drafts`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  let data: Record<string, unknown> = {};
+
+  try {
+    const result: unknown = await response.json();
+
+    if (typeof result === "object" && result !== null) {
+      data = result as Record<string, unknown>;
+    }
+  } catch {
+    // Handle empty or non-JSON responses.
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Unable to load your saved drafts. Please try again.";
+
+    throw new StoriesServiceError(message, response.status);
+  }
+
+  return data as unknown as MyDraftsResponse;
+}
+
+export interface UpdateDraftPayload {
+  title?: string;
+  summary?: string;
+  classification?: string;
+  researchQuestion?: string | null;
+  methodology?: string | null;
+  findings?: string | null;
+  significance?: string | null;
+  limitations?: string | null;
+  changeNote?: string;
+}
+
+export async function updateStoryDraft(
+  id: string,
+  payload: UpdateDraftPayload,
+): Promise<{ story: DraftStory }> {
+  const response = await fetch(
+    `${API_URL}/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  let data: Record<string, unknown> = {};
+
+  try {
+    const result: unknown = await response.json();
+
+    if (typeof result === "object" && result !== null) {
+      data = result as Record<string, unknown>;
+    }
+  } catch {
+    // Handle responses that do not contain JSON.
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Unable to save your research draft. Please try again.";
+
+    throw new StoriesServiceError(message, response.status);
+  }
+
+  return data as unknown as { story: DraftStory };
+}
+
+export interface CreateDraftPayload {
+  title: string;
+  summary: string;
+  classification:
+    | "PEER_REVIEWED_ARTICLE"
+    | "PREPRINT"
+    | "THESIS_DISSERTATION"
+    | "CONFERENCE_PAPER"
+    | "RESEARCH_REPORT"
+    | "AUTHOR_DESCRIBED_PROJECT"
+    | "PRELIMINARY_UNPUBLISHED";
+  researchQuestion?: string;
+  methodology?: string;
+  findings?: string;
+  significance?: string;
+  limitations?: string;
+}
+
+export async function createStoryDraft(
+  payload: CreateDraftPayload,
+): Promise<{ story: DraftStory }> {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let data: Record<string, unknown> = {};
+
+  try {
+    const result: unknown = await response.json();
+
+    if (typeof result === "object" && result !== null) {
+      data = result as Record<string, unknown>;
+    }
+  } catch {
+    // Handle responses that do not contain JSON.
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Unable to create your research draft. Please try again.";
+
+    throw new StoriesServiceError(message, response.status);
+  }
+
+  return data as unknown as { story: DraftStory };
+}
+
+export type StoryAuthorRole =
+  | "LEAD_AUTHOR"
+  | "CO_AUTHOR"
+  | "CONTRIBUTOR"
+  | "SUPERVISOR"
+  | "ADVISER"
+  | "OTHER";
+
+export interface PublishStoryAuthor {
+  displayName: string;
+  affiliationText?: string;
+  role: StoryAuthorRole;
+  isCorresponding?: boolean;
+}
+
+export interface PublishStoryPayload {
+  attestation: true;
+  authors: PublishStoryAuthor[];
+}
+
+export interface PublishedStory {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  classification: string;
+  status: "PUBLISHED";
+  publishedAt: string;
+}
+
+export async function publishStory(
+  id: string,
+  payload: PublishStoryPayload,
+): Promise<{ story: PublishedStory }> {
+  const response = await fetch(
+    `${API_URL}/${encodeURIComponent(id)}/publish`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  let data: Record<string, unknown> = {};
+
+  try {
+    const result: unknown = await response.json();
+
+    if (typeof result === "object" && result !== null) {
+      data = result as Record<string, unknown>;
+    }
+  } catch {
+    // Handle responses that do not contain JSON.
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Unable to publish your research story. Please try again.";
+
+    throw new StoriesServiceError(message, response.status);
+  }
+
+  return data as unknown as { story: PublishedStory };
+}
