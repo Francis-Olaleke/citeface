@@ -617,6 +617,19 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
         properties: {
           page: { type: "integer", minimum: 1 },
           limit: { type: "integer", minimum: 1, maximum: 20 },
+          q: { type: "string", minLength: 1, maxLength: 200 },
+          classification: {
+            type: "string",
+            enum: [
+              "PEER_REVIEWED_ARTICLE",
+              "PREPRINT",
+              "THESIS_DISSERTATION",
+              "CONFERENCE_PAPER",
+              "RESEARCH_REPORT",
+              "AUTHOR_DESCRIBED_PROJECT",
+              "PRELIMINARY_UNPUBLISHED",
+            ],
+          },
         },
         additionalProperties: false,
       },
@@ -630,6 +643,9 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
     );
     
 
+    const searchQuery = request.query.q?.trim();
+    const classification = request.query.classification;
+
     const where = {
       status: "PUBLISHED" as const,
       deletedAt: null,
@@ -638,6 +654,20 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
         status: "ACTIVE" as const,
         deletedAt: null,
       },
+      ...(classification ? { classification } : {}),
+      ...(searchQuery
+        ? {
+            OR: [
+              { title: { contains: searchQuery, mode: "insensitive" as const } },
+              { summary: { contains: searchQuery, mode: "insensitive" as const } },
+              { researchQuestion: { contains: searchQuery, mode: "insensitive" as const } },
+              { methodology: { contains: searchQuery, mode: "insensitive" as const } },
+              { findings: { contains: searchQuery, mode: "insensitive" as const } },
+              { significance: { contains: searchQuery, mode: "insensitive" as const } },
+              { limitations: { contains: searchQuery, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
     };
 
     const [stories, total] = await prisma.$transaction([

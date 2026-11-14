@@ -52,6 +52,19 @@ async function createStory(
     status?: StoryStatusValue;
     publishedAt?: Date | null;
     deletedAt?: Date | null;
+    classification?:
+      | "PEER_REVIEWED_ARTICLE"
+      | "PREPRINT"
+      | "THESIS_DISSERTATION"
+      | "CONFERENCE_PAPER"
+      | "RESEARCH_REPORT"
+      | "AUTHOR_DESCRIBED_PROJECT"
+      | "PRELIMINARY_UNPUBLISHED";
+    researchQuestion?: string;
+    methodology?: string;
+    findings?: string;
+    significance?: string;
+    limitations?: string;
   } = {},
 ) {
   const title = options.title ?? "Test Research Story";
@@ -63,7 +76,12 @@ async function createStory(
       title,
       slug,
       summary: "A research story created for feed testing.",
-      classification: "RESEARCH_REPORT",
+      classification: options.classification ?? "RESEARCH_REPORT",
+      researchQuestion: options.researchQuestion,
+      methodology: options.methodology,
+      findings: options.findings,
+      significance: options.significance,
+      limitations: options.limitations,
       status: options.status ?? "PUBLISHED",
       publishedAt:
         options.publishedAt === undefined
@@ -73,7 +91,6 @@ async function createStory(
     },
   });
 }
-
 beforeAll(async () => {
   app = await makeApp();
 });
