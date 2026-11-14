@@ -4,9 +4,20 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../../plugins/database.js";
 import { getSessionUser } from "../auth/auth.service.js";
 
+type ResearchClassification =
+  | "PEER_REVIEWED_ARTICLE"
+  | "PREPRINT"
+  | "THESIS_DISSERTATION"
+  | "CONFERENCE_PAPER"
+  | "RESEARCH_REPORT"
+  | "AUTHOR_DESCRIBED_PROJECT"
+  | "PRELIMINARY_UNPUBLISHED";
+
 interface FeedQuery {
   page?: number;
   limit?: number;
+  q?: string;
+  classification?: ResearchClassification;
 }
 
 interface CreateStoryBody {
@@ -178,188 +189,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(201).send({ story });
     },
   );
-
-  // F-05.4: Publish a research story with explicit author attribution.
-  app.post<{ Params: { id: string }; Body: PublishStoryBody }>(
-    "/:id/publish",
-    {
-      schema: {
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["attestation", "authors"],
-          additionalProperties: false,
-          properties: {
-            attestation: {
-              type: "boolean",
-              const: true,
-            },
-            authors: {
-              type: "array",
-              minItems: 1,
-              maxItems: 20,
-              items: {
-                type: "object",
-                required: ["displayName", "role"],
-                additionalProperties: false,
-                properties: {
-                  displayName: {
-                    type: "string",
-                    minLength: 1,
-                    maxLength: 200,
-                  },
-                  affiliationText: {
-                    type: "string",
-                    maxLength: 300,
-                  },
-                  role: {
-                    type: "string",
-                    enum: [
-                      "LEAD_AUTHOR",
-                      "CO_AUTHOR",
-                      "CONTRIBUTOR",
-                      "SUPERVISOR",
-                      "ADVISER",
-                      "OTHER",
-                    ],
-                  },
-                  isCorresponding: {
-                    type: "boolean",
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      const token = request.cookies.citeface_session;
-
-      if (!token) {
-        return reply.code(401).send({
-          error: "Authentication required",
-        });
-      }
-
-      const user = await getSessionUser(token);
-
-      if (!user) {
-        reply.clearCookie("citeface_session", { path: "/" });
-
-        return reply.code(401).send({
-          error: "Invalid or expired session",
-        });
-      }
-
-      const { id } = request.params;
-      const { authors } = request.body;
-
-      // Require exactly one explicitly identified lead author.
-      const leadAuthors = authors.filter(
-        (author) => author.role === "LEAD_AUTHOR",
-      );
-
-      if (leadAuthors.length !== 1) {
-        return reply.code(400).send({
-          error: "A research story must have exactly one lead author",
-        });
-      }
-
-      // Validate names after trimming whitespace.
-      const normalizedAuthors = authors.map((author) => ({
-        ...author,
-        displayName: author.displayName.trim(),
-        affiliationText: author.affiliationText?.trim() || null,
-      }));
-
-      if (normalizedAuthors.some((author) => !author.displayName)) {
-        return reply.code(400).send({
-          error: "Every author must have a valid display name",
-        });
-      }
-
-      // Publish the story and save its authors atomically.
-      const story = await prisma.$transaction(async (tx) => {
-        const publication = await tx.researchStory.updateMany({
-          where: {
-            id,
-            creatorId: user.id,
-            status: "DRAFT",
-            deletedAt: null,
-            publishedAt: null,
-          },
-          data: {
-            status: "PUBLISHED",
-            publishedAt: new Date(),
-          },
-        });
-
-        // The story is not an eligible draft owned by this user.
-        if (publication.count !== 1) {
-          return null;
-        }
-
-        await tx.storyAuthor.createMany({
-          data: normalizedAuthors.map((author, index) => ({
-            storyId: id,
-            displayName: author.displayName,
-            affiliationText: author.affiliationText,
-            role: author.role,
-            sortOrder: index,
-            isCorresponding: author.isCorresponding ?? false,
-          })),
-        });
-
-        return tx.researchStory.findUnique({
-          where: { id },
-          select: {
-            id: true,
-            creatorId: true,
-            title: true,
-            slug: true,
-            summary: true,
-            researchQuestion: true,
-            methodology: true,
-            findings: true,
-            significance: true,
-            limitations: true,
-            classification: true,
-            status: true,
-            publishedAt: true,
-            createdAt: true,
-            updatedAt: true,
-            authors: {
-              orderBy: { sortOrder: "asc" },
-              select: {
-                id: true,
-                displayName: true,
-                affiliationText: true,
-                role: true,
-                sortOrder: true,
-                isCorresponding: true,
-              },
-            },
-          },
-        });
-      });
-
-      if (!story) {
-        return reply.code(404).send({
-          error: "Draft not found or cannot be published",
-        });
-      }
-
-      return reply.code(200).send({ story });
-    },
-  );
-
+  
   
   // F-05.3: Update an existing private research draft.
   app.patch<{ Params: { id: string }; Body: UpdateStoryBody }>(
@@ -617,6 +447,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
       20,
       Math.max(1, Number(request.query.limit) || 20),
     );
+    
 
     const where = {
       status: "PUBLISHED" as const,

@@ -83,8 +83,8 @@ function App() {
           </Route>
 
           <Route
-            path="/"
-            element={<Navigate to="/dashboard" replace />}
+          path="/"
+          element={<Dashboard publicView />}
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />

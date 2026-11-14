@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
+import { Link, useNavigate } from "react-router-dom";
 import MyDrafts from "../components/MyDrafts";
 import ResearchDraftEditor from "../components/ResearchDraftEditor";
 import ResearchStoryComposer from "../components/ResearchStoryComposer";
@@ -148,14 +147,17 @@ function StoryCard({ story }: { story: FeedStory }) {
   );
 }
 
-function Dashboard() {
+interface DashboardProps {
+  publicView?: boolean;
+}
+
+function Dashboard({ publicView = false }: DashboardProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [selectedDraft, setSelectedDraft] =
+ const [selectedDraft, setSelectedDraft] =
   useState<DraftStory | null>(null);
-  const [showStoryComposer, setShowStoryComposer] = useState(false);
- 
-  useState<DraftStory | null>(null);
+
+const [showStoryComposer, setShowStoryComposer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -255,40 +257,60 @@ function Dashboard() {
 
   return (
     <div className="citeface-app">
-      <header className="topbar">
-        <div>
-          <div className="brand">
-            Cite<span>face</span>
-          </div>
-          <div className="brand-tagline">
-            Research. Connect. Discover.
-          </div>
+<header className="topbar">
+  <div>
+    <div className="brand">
+      Cite<span>face</span>
+    </div>
+    <div className="brand-tagline">
+      Research. Connect. Discover.
+    </div>
+  </div>
+
+  <div className="topbar-search">
+    <input
+      type="search"
+      placeholder="Search research, people and topics..."
+      aria-label="Search Citeface"
+      disabled
+    />
+  </div>
+
+  <div className="topbar-actions">
+    {publicView ? (
+      user ? (
+        <Link className="signout-button" to="/dashboard">
+          Go to workspace
+        </Link>
+      ) : (
+        <>
+          <Link className="signout-button" to="/login">
+            Sign in
+          </Link>
+
+          <Link className="signout-button" to="/register">
+            Create account
+          </Link>
+        </>
+      )
+    ) : (
+      <>
+        <div className="profile-avatar" title={user?.displayName}>
+          {initials}
         </div>
 
-        <div className="topbar-search">
-          <input
-            type="search"
-            placeholder="Search research, people and topics..."
-            aria-label="Search Citeface"
-            disabled
-          />
-        </div>
-
-        <div className="topbar-actions">
-          <div className="profile-avatar" title={user?.displayName}>
-            {initials}
-          </div>
-
-          <button
-            className="signout-button"
-            type="button"
-            onClick={handleLogout}
-            disabled={signingOut}
-          >
-            {signingOut ? "Signing out..." : "Sign out"}
-          </button>
-        </div>
-      </header>
+        <button
+          className="signout-button"
+          type="button"
+          onClick={handleLogout}
+          disabled={signingOut}
+        >
+          {signingOut ? "Signing out..." : "Sign out"}
+        </button>
+      </>
+    )}
+  </div>
+</header>
 
       {error && (
         <div className="dashboard-error" role="alert">
@@ -296,7 +318,7 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="dashboard-layout">
+      <div className={`dashboard-layout ${publicView ? "public-layout" : ""}`}>
         <aside className="sidebar">
           <div className="panel">
             <h2 className="sidebar-heading">Workspace</h2>
@@ -355,14 +377,29 @@ function Dashboard() {
         </aside>
 
         <main className="main-feed">
-          <section className="welcome-section">
-            <h1>Welcome back, {user?.displayName}!</h1>
-            <p>
-              Discover ideas, explore research and connect with
-              people shaping the future.
-            </p>
-          </section>
-                  <MyDrafts
+         <section className="welcome-section">
+  {publicView ? (
+    <>
+      <h1>Discover research. Connect with ideas.</h1>
+      <p>
+        Explore research stories, discover new perspectives
+        and learn from researchers shaping the future.
+      </p>
+    </>
+  ) : (
+    <>
+      <h1>Welcome back, {user?.displayName}!</h1>
+      <p>
+        Discover ideas, explore research and connect with
+        people shaping the future.
+      </p>
+    </>
+  )}
+</section>
+
+{!publicView && (
+  <>
+    <MyDrafts
   onOpenDraft={(draft) => setSelectedDraft(draft)}
   refreshKey={draftsRefreshKey}
 />
@@ -433,7 +470,8 @@ function Dashboard() {
     </div>
   </section>
 )}
-
+  </>
+)}
 
           <div className="feed-heading">
             <h2>Discover research</h2>
@@ -493,50 +531,52 @@ function Dashboard() {
             </div>
           )}
         </main>
+        
+        {!publicView && (
+          <aside className="right-sidebar">
+            <section className="panel">
+              <h2 className="panel-heading">Your profile</h2>
 
-        <aside className="right-sidebar">
-          <section className="panel">
-            <h2 className="panel-heading">Your profile</h2>
+              <div className="sidebar-profile">
+                <div className="profile-avatar">{initials}</div>
 
-            <div className="sidebar-profile">
-              <div className="profile-avatar">{initials}</div>
-
-              <div>
-                <strong>{user?.displayName}</strong>
-                <small>@{user?.username}</small>
+                <div>
+                  <strong>{user?.displayName}</strong>
+                  <small>@{user?.username}</small>
+                </div>
               </div>
-            </div>
 
-            <div className="profile-email">{user?.email}</div>
+              <div className="profile-email">{user?.email}</div>
 
-            <div className="sidebar-divider" />
+              <div className="sidebar-divider" />
 
-            <p className="sidebar-description">
-              Your Citeface profile is ready. Build your research
-              identity and connect with the research community.
-            </p>
-          </section>
+              <p className="sidebar-description">
+                Your Citeface profile is ready. Build your research
+                identity and connect with the research community.
+              </p>
+            </section>
 
-          <section className="panel" style={{ marginTop: "16px" }}>
-            <h2 className="panel-heading">Explore research areas</h2>
+            <section className="panel" style={{ marginTop: "16px" }}>
+              <h2 className="panel-heading">Explore research areas</h2>
 
-            <div className="topic-list">
-              <span className="topic-tag">HealthTech</span>
-              <span className="topic-tag">AI & Technology</span>
-              <span className="topic-tag">Life Sciences</span>
-              <span className="topic-tag">Climate Science</span>
-              <span className="topic-tag">Agriculture</span>
-              <span className="topic-tag">Education</span>
-            </div>
+              <div className="topic-list">
+                <span className="topic-tag">HealthTech</span>
+                <span className="topic-tag">AI & Technology</span>
+                <span className="topic-tag">Life Sciences</span>
+                <span className="topic-tag">Climate Science</span>
+                <span className="topic-tag">Agriculture</span>
+                <span className="topic-tag">Education</span>
+              </div>
 
-            <div className="sidebar-divider" />
+              <div className="sidebar-divider" />
 
-            <p className="sidebar-description">
-              Topic discovery and researcher recommendations
-              will become available as we build the feed.
-            </p>
-          </section>
-        </aside>
+              <p className="sidebar-description">
+                Topic discovery and researcher recommendations
+                will become available as we build the feed.
+              </p>
+            </section>
+          </aside>
+        )}
       </div>
     </div>
   );
