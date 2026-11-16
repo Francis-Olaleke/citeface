@@ -1,4 +1,4 @@
-
+﻿
 import type { FastifyPluginAsync } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../../plugins/database.js";
@@ -770,6 +770,126 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
       },
     });
   });
+
+// F-06: Retrieve one publicly available research story by slug.
+  app.get<{ Params: { slug: string } }>(
+    "/:slug",
+    async (request, reply) => {
+      const { slug } = request.params;
+
+      const story = await prisma.researchStory.findFirst({
+        where: {
+          slug,
+          status: "PUBLISHED",
+          publishedAt: { not: null },
+          deletedAt: null,
+          retractedAt: null,
+          retraction: { is: null },
+          creator: {
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+        },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          summary: true,
+          classification: true,
+          researchQuestion: true,
+          methodology: true,
+          findings: true,
+          significance: true,
+          limitations: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+            },
+          },
+          authors: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              displayName: true,
+              affiliationText: true,
+              role: true,
+              sortOrder: true,
+              isCorresponding: true,
+            },
+          },
+          topics: {
+            select: {
+              topic: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
+          media: {
+            where: {
+              media: {
+                is: { deletedAt: null },
+              },
+            },
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              sortOrder: true,
+              caption: true,
+              media: {
+                select: {
+                  id: true,
+                  type: true,
+                  mimeType: true,
+                  width: true,
+                  height: true,
+                  durationSeconds: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+          sources: {
+            select: {
+              id: true,
+              type: true,
+              title: true,
+              doi: true,
+              url: true,
+              journal: true,
+              publisher: true,
+              publicationDate: true,
+              authorsText: true,
+            },
+          },
+          _count: {
+            select: {
+              reactions: true,
+              comments: true,
+              questions: true,
+            },
+          },
+        },
+      });
+
+      if (!story) {
+        return reply.code(404).send({
+          error: "Not Found",
+          message: "Research story not found.",
+        });
+      }
+
+      return reply.send({ story });
+    },
+  );
 };
 
 export default storiesRoutes;

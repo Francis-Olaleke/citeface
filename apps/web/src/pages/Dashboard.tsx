@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MyDrafts from "../components/MyDrafts";
 import ResearchDraftEditor from "../components/ResearchDraftEditor";
@@ -11,6 +11,7 @@ import {
   getStoriesFeed,
   type FeedStory,
   type DraftStory,
+  type ResearchClassification,
 } from "../services/stories";
 
 import "./dashboard.css";
@@ -167,28 +168,53 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [classificationFilter, setClassificationFilter] =
+    useState<ResearchClassification | "">("");
+  const feedRequestVersion = useRef(0);
   const [refreshFeed, setRefreshFeed] = useState(0);
   const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
   
   const initials = getInitials(user?.displayName ?? "C");
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
     let cancelled = false;
+    const requestVersion = ++feedRequestVersion.current;
 
     async function loadFeed() {
       setLoadingStories(true);
+      setLoadingMore(false);
       setFeedError(null);
+      setStories([]);
+      setPage(1);
+      setHasNextPage(false);
 
       try {
-        const result = await getStoriesFeed(1, 20);
+        const result = await getStoriesFeed(1, 20, {
+          q: debouncedSearch,
+          classification: classificationFilter,
+        });
 
-        if (cancelled) return;
+        if (cancelled || requestVersion !== feedRequestVersion.current) {
+          return;
+        }
 
         setStories(result.stories);
         setPage(result.pagination.page);
         setHasNextPage(result.pagination.hasNextPage);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || requestVersion !== feedRequestVersion.current) {
+          return;
+        }
 
         setFeedError(
           err instanceof Error
@@ -196,7 +222,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
             : "Unable to load research stories. Please try again."
         );
       } finally {
-        if (!cancelled) {
+        if (!cancelled && requestVersion === feedRequestVersion.current) {
           setLoadingStories(false);
         }
       }
@@ -207,17 +233,24 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [refreshFeed]);
+  }, [debouncedSearch, classificationFilter, refreshFeed]);
 
   async function handleLoadMore() {
-    if (loadingMore || !hasNextPage) return;
+    if (loadingStories || loadingMore || !hasNextPage) return;
+
+    const requestVersion = feedRequestVersion.current;
+    const nextPage = page + 1;
 
     setLoadingMore(true);
     setFeedError(null);
 
     try {
-      const nextPage = page + 1;
-      const result = await getStoriesFeed(nextPage, 20);
+      const result = await getStoriesFeed(nextPage, 20, {
+        q: debouncedSearch,
+        classification: classificationFilter,
+      });
+
+      if (requestVersion !== feedRequestVersion.current) return;
 
       setStories((currentStories) => [
         ...currentStories,
@@ -227,13 +260,17 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
       setPage(result.pagination.page);
       setHasNextPage(result.pagination.hasNextPage);
     } catch (err) {
+      if (requestVersion !== feedRequestVersion.current) return;
+
       setFeedError(
         err instanceof Error
           ? err.message
           : "Unable to load more stories. Please try again."
       );
     } finally {
-      setLoadingMore(false);
+      if (requestVersion === feedRequestVersion.current) {
+        setLoadingMore(false);
+      }
     }
   }
 
@@ -270,9 +307,10 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   <div className="topbar-search">
     <input
       type="search"
-      placeholder="Search research, people and topics..."
-      aria-label="Search Citeface"
-      disabled
+      placeholder="Search research stories..."
+      aria-label="Search research stories"
+      value={searchInput}
+      onChange={(event) => setSearchInput(event.target.value)}
     />
   </div>
 
@@ -475,7 +513,35 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 
           <div className="feed-heading">
             <h2>Discover research</h2>
-            <span className="feed-preview-label">Latest stories</span>
+            <span className="feed-preview-label">
+              {debouncedSearch || classificationFilter
+                ? "Filtered stories"
+                : "Latest stories"}
+            </span>
+          </div>
+
+          <div className="discovery-filters">
+            <label htmlFor="research-classification-filter">
+              Research type
+            </label>
+            <select
+              id="research-classification-filter"
+              value={classificationFilter}
+              onChange={(event) =>
+                setClassificationFilter(
+                  event.target.value as ResearchClassification | ""
+                )
+              }
+            >
+              <option value="">All research types</option>
+              <option value="PEER_REVIEWED_ARTICLE">Peer-reviewed article</option>
+              <option value="PREPRINT">Preprint</option>
+              <option value="THESIS_DISSERTATION">Thesis / dissertation</option>
+              <option value="CONFERENCE_PAPER">Conference paper</option>
+              <option value="RESEARCH_REPORT">Research report</option>
+              <option value="AUTHOR_DESCRIBED_PROJECT">Author-described project</option>
+              <option value="PRELIMINARY_UNPUBLISHED">Preliminary unpublished</option>
+            </select>
           </div>
 
           {loadingStories && (
@@ -501,12 +567,28 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
           {!loadingStories && !feedError && stories.length === 0 && (
             <section className="panel feed-empty">
               <div className="empty-icon">✧</div>
-              <h3>Your discovery feed starts here</h3>
+              <h3>
+                {debouncedSearch || classificationFilter
+                  ? "No matching research stories"
+                  : "Your discovery feed starts here"}
+              </h3>
               <p>
-                There are no published research stories to show yet.
-                As researchers publish stories, videos and graphical
-                abstracts, they will appear here.
+                {debouncedSearch || classificationFilter
+                  ? "No published stories match your current search and filters. Try another search or research type."
+                  : "There are no published research stories to show yet. As researchers publish stories, videos and graphical abstracts, they will appear here."}
               </p>
+              {(searchInput || classificationFilter) && (
+                <button
+                  className="feed-retry-button"
+                  type="button"
+                  onClick={() => {
+                    setSearchInput("");
+                    setClassificationFilter("");
+                  }}
+                >
+                  Clear filters
+                </button>
+              )}
             </section>
           )}
 

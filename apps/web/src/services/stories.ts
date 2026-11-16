@@ -84,12 +84,40 @@ export class StoriesServiceError extends Error {
   }
 }
 
+export type ResearchClassification =
+  | "PEER_REVIEWED_ARTICLE"
+  | "PREPRINT"
+  | "THESIS_DISSERTATION"
+  | "CONFERENCE_PAPER"
+  | "RESEARCH_REPORT"
+  | "AUTHOR_DESCRIBED_PROJECT"
+  | "PRELIMINARY_UNPUBLISHED";
+
+export interface StoriesFeedFilters {
+  q?: string;
+  classification?: ResearchClassification | "";
+}
+
 export async function getStoriesFeed(
   page = 1,
-  limit = 20
+  limit = 20,
+  filters: StoriesFeedFilters = {}
 ): Promise<StoriesFeedResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (filters.q?.trim()) {
+    params.set("q", filters.q.trim());
+  }
+
+  if (filters.classification) {
+    params.set("classification", filters.classification);
+  }
+
   const response = await fetch(
-    `${API_URL}/feed?page=${page}&limit=${limit}`,
+    `${API_URL}/feed?${params.toString()}`,
     {
       method: "GET",
       credentials: "include",

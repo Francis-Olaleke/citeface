@@ -1229,3 +1229,151 @@ describe("F-05.4 research story publishing", () => {
 });
 
 
+
+// F-06: Public research story detail
+describe("F-06 public research story detail", () => {
+  it("returns a published story by slug without exposing private fields", async () => {
+    const user = await createUser();
+
+    await createStory(user.id, {
+      title: "Public Detail Test",
+      slug: "public-detail-test",
+      researchQuestion: "What are the research implications?",
+      methodology: "A descriptive methodology.",
+      findings: "The findings are presented here.",
+      significance: "This research has practical significance.",
+      limitations: "The study has defined limitations.",
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/public-detail-test",
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const story = res.json().story;
+
+    expect(story).toMatchObject({
+      slug: "public-detail-test",
+      title: "Public Detail Test",
+      researchQuestion: "What are the research implications?",
+      methodology: "A descriptive methodology.",
+      findings: "The findings are presented here.",
+      significance: "This research has practical significance.",
+      limitations: "The study has defined limitations.",
+      creator: {
+        username: "feeduser1",
+        displayName: "Feed User 1",
+      },
+    });
+
+    expect(story.creator).not.toHaveProperty("email");
+    expect(story.creator).not.toHaveProperty("passwordHash");
+    expect(JSON.stringify(story)).not.toContain("storageKey");
+    expect(JSON.stringify(story)).not.toContain("storageProvider");
+    expect(JSON.stringify(story)).not.toContain("feeduser1@example.com");
+  });
+
+  it("returns 404 for drafts, unpublished, archived, retracted and deleted stories", async () => {
+    const user = await createUser();
+
+    const hiddenStories = [
+      await createStory(user.id, {
+        slug: "detail-draft",
+        status: "DRAFT",
+        publishedAt: null,
+      }),
+      await createStory(user.id, {
+        slug: "detail-unpublished",
+        status: "PUBLISHED",
+        publishedAt: null,
+      }),
+      await createStory(user.id, {
+        slug: "detail-archived",
+        status: "ARCHIVED",
+      }),
+      await createStory(user.id, {
+        slug: "detail-retracted",
+        status: "RETRACTED",
+      }),
+      await createStory(user.id, {
+        slug: "detail-deleted",
+        deletedAt: new Date(),
+      }),
+    ];
+
+    for (const story of hiddenStories) {
+      const res = await app.inject({
+        method: "GET",
+        url: `/stories/${story.slug}`,
+      });
+
+      expect(res.statusCode).toBe(404);
+    }
+  });
+
+  it("returns 404 when the story creator is suspended or deleted", async () => {
+    const suspendedUser = await createUser(1, {
+      status: "SUSPENDED",
+    });
+
+    const deletedUser = await createUser(2, {
+      deletedAt: new Date(),
+    });
+
+    await createStory(suspendedUser.id, {
+      slug: "detail-suspended-creator",
+    });
+
+    await createStory(deletedUser.id, {
+      slug: "detail-deleted-creator",
+    });
+
+    for (const slug of [
+      "detail-suspended-creator",
+      "detail-deleted-creator",
+    ]) {
+      const res = await app.inject({
+        method: "GET",
+        url: `/stories/${slug}`,
+      });
+
+      expect(res.statusCode).toBe(404);
+    }
+  });
+
+  it("returns 404 when a retraction record exists", async () => {
+    const user = await createUser();
+
+    const story = await createStory(user.id, {
+      slug: "detail-with-retraction-record",
+      status: "PUBLISHED",
+    });
+
+    await prisma.retraction.create({
+      data: {
+        storyId: story.id,
+        initiatedById: user.id,
+        reason: "Retraction test reason.",
+        notice: "This story has been retracted.",
+      },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/detail-with-retraction-record",
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 404 for an unknown slug", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/this-story-does-not-exist",
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+});
