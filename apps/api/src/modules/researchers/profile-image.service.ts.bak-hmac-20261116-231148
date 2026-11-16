@@ -1,0 +1,120 @@
+﻿import { v2 as cloudinary } from "cloudinary";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_FORMATS = new Set(["jpg", "jpeg", "png", "webp"]);
+
+export const PROFILE_IMAGE_MAX_BYTES = MAX_IMAGE_BYTES;
+
+export function getProfileImageCloudinary() {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Cloudinary is not configured.");
+  }
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+    secure: true,
+  });
+
+  return { cloudName, apiKey, apiSecret };
+}
+
+export function profileImagePublicId(userId: string) {
+  return `citeface/profile-photos/${userId}/profile`;
+}
+
+export function createProfileImageSignature(
+  userId: string,
+  timestamp: number,
+) {
+  const config = getProfileImageCloudinary();
+  const publicId = profileImagePublicId(userId);
+
+  const params = {
+    public_id: publicId,
+    timestamp,
+    overwrite: true,
+  };
+
+  return {
+    cloudName: config.cloudName,
+    apiKey: config.apiKey,
+    publicId,
+    timestamp,
+    overwrite: true,
+    signature: cloudinary.utils.api_sign_request(
+      params,
+      config.apiSecret,
+    ),
+  };
+}
+
+interface CloudinaryProfileAsset {
+  public_id: string;
+  resource_type: string;
+  format: string;
+  bytes: number;
+  width: number;
+  height: number;
+  secure_url: string;
+  created_at: string;
+}
+
+export async function verifyProfileImageAsset(
+  userId: string,
+  timestamp: number,
+) {
+  const config = getProfileImageCloudinary();
+  const publicId = profileImagePublicId(userId);
+
+  const asset = await cloudinary.api.resource(publicId, {
+    resource_type: "image",
+    type: "upload",
+  }) as CloudinaryProfileAsset;
+
+  const uploadTime = new Date(asset.created_at).getTime();
+  const requestedTime = timestamp * 1000;
+  const now = Date.now();
+
+  if (
+    asset.public_id !== publicId ||
+    asset.resource_type !== "image" ||
+    !ALLOWED_FORMATS.has(asset.format?.toLowerCase()) ||
+    !Number.isSafeInteger(asset.bytes) ||
+    asset.bytes <= 0 ||
+    asset.bytes > MAX_IMAGE_BYTES ||
+    !Number.isSafeInteger(asset.width) ||
+    !Number.isSafeInteger(asset.height) ||
+    asset.width <= 0 ||
+    asset.height <= 0 ||
+    !Number.isFinite(uploadTime) ||
+    uploadTime < requestedTime - 60_000 ||
+    uploadTime > now + 60_000 ||
+    now - requestedTime > 10 * 60 * 1000 ||
+    !asset.secure_url?.startsWith(
+      `https://res.cloudinary.com/${config.cloudName}/image/upload/`,
+    )
+  ) {
+    throw new Error("The uploaded image failed validation.");
+  }
+
+  return asset.secure_url;
+}
+
+export async function destroyProfileImage(userId: string) {
+  getProfileImageCloudinary();
+
+  return cloudinary.uploader.destroy(
+    profileImagePublicId(userId),
+    {
+      resource_type: "image",
+      type: "upload",
+      invalidate: true,
+    },
+  );
+}
