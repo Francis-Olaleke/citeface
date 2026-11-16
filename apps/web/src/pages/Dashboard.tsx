@@ -103,7 +103,11 @@ function StoryCard({ story }: { story: FeedStory }) {
         </span>
       </div>
 
-      <h3 className="story-title">{story.title}</h3>
+      <h3 className="story-title">
+        <Link to={`/stories/${encodeURIComponent(story.slug)}`}>
+          {story.title}
+        </Link>
+      </h3>
 
       <p className="story-summary">{description}</p>
 

@@ -384,3 +384,114 @@ export async function publishStory(
 
   return data as unknown as { story: PublishedStory };
 }
+
+// F-06: Public research story detail
+
+export interface PublicStory {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  classification: string;
+  researchQuestion: string | null;
+  methodology: string | null;
+  findings: string | null;
+  significance: string | null;
+  limitations: string | null;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+
+  creator: {
+    id: string;
+    username: string;
+    displayName: string;
+  };
+
+  authors: {
+    id: string;
+    displayName: string;
+    affiliationText: string | null;
+    role: string;
+    sortOrder: number;
+    isCorresponding: boolean;
+  }[];
+
+  topics: {
+    topic: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }[];
+
+  media: {
+    id: string;
+    sortOrder: number;
+    caption: string | null;
+    media: {
+      id: string;
+      type: string;
+      mimeType: string;
+      width: number | null;
+      height: number | null;
+      durationSeconds: number | null;
+      createdAt: string;
+    };
+  }[];
+
+  sources: {
+    id: string;
+    type: string;
+    title: string | null;
+    doi: string | null;
+    url: string | null;
+    journal: string | null;
+    publisher: string | null;
+    publicationDate: string | null;
+    authorsText: string | null;
+  }[];
+
+  _count: {
+    reactions: number;
+    comments: number;
+    questions: number;
+  };
+}
+
+export async function getPublicStory(
+  slug: string,
+): Promise<{ story: PublicStory }> {
+  const response = await fetch(
+    `${API_URL}/${encodeURIComponent(slug)}`,
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
+
+  let data: Record<string, unknown> = {};
+
+  try {
+    const result: unknown = await response.json();
+
+    if (typeof result === "object" && result !== null) {
+      data = result as Record<string, unknown>;
+    }
+  } catch {
+    // Handle empty or non-JSON responses.
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Unable to load this research story. Please try again.";
+
+    throw new StoriesServiceError(message, response.status);
+  }
+
+  return data as unknown as { story: PublicStory };
+}
