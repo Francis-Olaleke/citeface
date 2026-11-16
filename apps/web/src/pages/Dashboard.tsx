@@ -1,11 +1,12 @@
 
-import { useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MyDrafts from "../components/MyDrafts";
 import ResearchDraftEditor from "../components/ResearchDraftEditor";
 import ResearchStoryComposer from "../components/ResearchStoryComposer";
 
 import { useAuth } from "../context/AuthContext";
+import { removeProfileImage, uploadProfileImage } from "../services/profile-images";
 
 import {
   getStoriesFeed,
@@ -174,7 +175,7 @@ interface DashboardProps {
 }
 
 function Dashboard({ publicView = false }: DashboardProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
  const [selectedDraft, setSelectedDraft] =
   useState<DraftStory | null>(null);
@@ -182,6 +183,9 @@ function Dashboard({ publicView = false }: DashboardProps) {
 const [showStoryComposer, setShowStoryComposer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [profileImageBusy, setProfileImageBusy] = useState(false);
+  const [profileImageMessage, setProfileImageMessage] = useState<string | null>(null);
+  const profileImageInput = useRef<HTMLInputElement>(null);
 
   const [stories, setStories] = useState<FeedStory[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
@@ -312,6 +316,53 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
       setSigningOut(false);
     }
   }
+  async function handleProfileImageChange(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) return;
+
+    setProfileImageMessage(null);
+    setProfileImageBusy(true);
+
+    try {
+      await uploadProfileImage(file);
+      await refreshUser();
+      setProfileImageMessage("Profile photo updated successfully.");
+    } catch (err) {
+      setProfileImageMessage(
+        err instanceof Error
+          ? err.message
+          : "Unable to upload your profile photo. Please try again."
+      );
+    } finally {
+      setProfileImageBusy(false);
+
+      if (profileImageInput.current) {
+        profileImageInput.current.value = "";
+      }
+    }
+  }
+
+  async function handleRemoveProfileImage() {
+    setProfileImageMessage(null);
+    setProfileImageBusy(true);
+
+    try {
+      await removeProfileImage();
+      await refreshUser();
+      setProfileImageMessage("Profile photo removed.");
+    } catch (err) {
+      setProfileImageMessage(
+        err instanceof Error
+          ? err.message
+          : "Unable to remove your profile photo. Please try again."
+      );
+    } finally {
+      setProfileImageBusy(false);
+    }
+  }
 
   return (
     <div className="citeface-app">
@@ -355,8 +406,14 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
     ) : (
       <>
         <div className="profile-avatar" title={user?.displayName}>
-          {initials}
-        </div>
+              {user?.profileImageUrl ? (
+                <img
+                  className="profile-avatar-image"
+                  src={user.profileImageUrl}
+                  alt=""
+                />
+              ) : initials}
+            </div>
 
         <button
           className="signout-button"
@@ -486,7 +543,15 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 ) : (
   <section className="panel composer">
     <div className="composer-top">
-      <div className="profile-avatar">{initials}</div>
+      <div className="profile-avatar">
+        {user?.profileImageUrl ? (
+          <img
+            className="profile-avatar-image"
+            src={user.profileImageUrl}
+            alt=""
+          />
+        ) : initials}
+      </div>
       <div
         className="composer-placeholder"
         onClick={() => setShowStoryComposer(true)}
@@ -641,7 +706,15 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
               <h2 className="panel-heading">Your profile</h2>
 
               <div className="sidebar-profile">
-                <div className="profile-avatar">{initials}</div>
+                <div className="profile-avatar">
+                  {user?.profileImageUrl ? (
+                    <img
+                      className="profile-avatar-image"
+                      src={user.profileImageUrl}
+                      alt=""
+                    />
+                  ) : initials}
+                </div>
 
                 <div>
                   <strong>{user?.displayName}</strong>
@@ -650,6 +723,51 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
               </div>
 
               <div className="profile-email">{user?.email}</div>
+
+              <div className="profile-image-controls">
+                <input
+                  ref={profileImageInput}
+                  className="profile-image-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleProfileImageChange}
+                  disabled={profileImageBusy}
+                />
+
+                <button
+                  type="button"
+                  className="profile-image-button"
+                  onClick={() => profileImageInput.current?.click()}
+                  disabled={profileImageBusy}
+                >
+                  {profileImageBusy
+                    ? "Please wait..."
+                    : user?.profileImageUrl
+                      ? "Change photo"
+                      : "Upload photo"}
+                </button>
+
+                {user?.profileImageUrl && (
+                  <button
+                    type="button"
+                    className="profile-image-remove"
+                    onClick={handleRemoveProfileImage}
+                    disabled={profileImageBusy}
+                  >
+                    Remove photo
+                  </button>
+                )}
+
+                <small className="profile-image-help">
+                  JPEG, PNG or WebP. Maximum size: 10 MB.
+                </small>
+
+                {profileImageMessage && (
+                  <p className="profile-image-message" role="status">
+                    {profileImageMessage}
+                  </p>
+                )}
+              </div>
 
               <div className="sidebar-divider" />
 

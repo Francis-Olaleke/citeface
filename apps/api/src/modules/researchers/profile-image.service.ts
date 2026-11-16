@@ -1,4 +1,4 @@
-﻿import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { v2 as cloudinary } from "cloudinary";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -71,7 +71,7 @@ interface CloudinaryProfileAsset {
   width: number;
   height: number;
   secure_url: string;
-  created_at: string;
+  version: number;
 }
 
 export async function verifyProfileImageAsset(
@@ -110,7 +110,7 @@ export async function verifyProfileImageAsset(
     type: "upload",
   }) as CloudinaryProfileAsset;
 
-  const uploadTime = new Date(asset.created_at).getTime();
+  const uploadVersionTime = asset.version * 1000;
 
   if (
     asset.public_id !== publicId ||
@@ -123,9 +123,11 @@ export async function verifyProfileImageAsset(
     !Number.isSafeInteger(asset.height) ||
     asset.width <= 0 ||
     asset.height <= 0 ||
-    !Number.isFinite(uploadTime) ||
-    uploadTime < requestedTime - 60_000 ||
-    uploadTime > now + 60_000 ||
+    !Number.isSafeInteger(asset.version) ||
+    asset.version <= 0 ||
+    !Number.isFinite(uploadVersionTime) ||
+    uploadVersionTime < requestedTime - 60_000 ||
+    uploadVersionTime > now + 60_000 ||
     !asset.secure_url?.startsWith(
       `https://res.cloudinary.com/${config.cloudName}/image/upload/`,
     )
