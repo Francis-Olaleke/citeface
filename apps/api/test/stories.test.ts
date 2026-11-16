@@ -369,6 +369,171 @@ describe("F-04 discovery feed", () => {
     expect(zeroPage.statusCode).toBe(400);
     expect(excessiveLimit.statusCode).toBe(400);
   });
+
+  it("searches research titles and content case-insensitively", async () => {
+    const user = await createUser();
+
+    await createStory(user.id, {
+      title: "Malaria Research",
+      slug: "malaria-research-search",
+      findings: "The study identified seasonal transmission patterns.",
+    });
+
+    await createStory(user.id, {
+      title: "Coastal Water Quality",
+      slug: "coastal-water-quality-search",
+      findings: "Heavy metal concentrations were measured.",
+    });
+
+    const titleSearch = await app.inject({
+      method: "GET",
+      url: "/stories/feed?q=MALARIA",
+    });
+
+    expect(titleSearch.statusCode).toBe(200);
+    expect(titleSearch.json().stories).toHaveLength(1);
+    expect(titleSearch.json().stories[0].title).toBe("Malaria Research");
+
+    const contentSearch = await app.inject({
+      method: "GET",
+      url: "/stories/feed?q=seasonal%20transmission",
+    });
+
+    expect(contentSearch.statusCode).toBe(200);
+    expect(contentSearch.json().stories).toHaveLength(1);
+    expect(contentSearch.json().stories[0].title).toBe("Malaria Research");
+  });
+
+  it("filters stories by research classification", async () => {
+    const user = await createUser();
+
+    await createStory(user.id, {
+      title: "Peer Reviewed Study",
+      slug: "peer-reviewed-filter-test",
+      classification: "PEER_REVIEWED_ARTICLE",
+    });
+
+    await createStory(user.id, {
+      title: "Research Report",
+      slug: "research-report-filter-test",
+      classification: "RESEARCH_REPORT",
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/feed?classification=PEER_REVIEWED_ARTICLE",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().stories).toHaveLength(1);
+    expect(res.json().stories[0].title).toBe("Peer Reviewed Study");
+    expect(res.json().pagination.total).toBe(1);
+  });
+
+  it("combines search and classification filters", async () => {
+    const user = await createUser();
+
+    await createStory(user.id, {
+      title: "Malaria Peer Reviewed Study",
+      slug: "malaria-peer-reviewed-combined",
+      classification: "PEER_REVIEWED_ARTICLE",
+    });
+
+    await createStory(user.id, {
+      title: "Malaria Research Report",
+      slug: "malaria-report-combined",
+      classification: "RESEARCH_REPORT",
+    });
+
+    await createStory(user.id, {
+      title: "Dengue Peer Reviewed Study",
+      slug: "dengue-peer-reviewed-combined",
+      classification: "PEER_REVIEWED_ARTICLE",
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/feed?q=malaria&classification=PEER_REVIEWED_ARTICLE",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().stories).toHaveLength(1);
+    expect(res.json().stories[0].title).toBe("Malaria Peer Reviewed Study");
+    expect(res.json().pagination.total).toBe(1);
+  });
+
+  it("calculates pagination totals after applying classification filters", async () => {
+    const user = await createUser();
+
+    await createStory(user.id, {
+      title: "Filtered Study One",
+      slug: "filtered-study-one",
+      classification: "PREPRINT",
+    });
+
+    await createStory(user.id, {
+      title: "Filtered Study Two",
+      slug: "filtered-study-two",
+      classification: "PREPRINT",
+    });
+
+    await createStory(user.id, {
+      title: "Unfiltered Study",
+      slug: "unfiltered-study",
+      classification: "RESEARCH_REPORT",
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/feed?classification=PREPRINT&page=1&limit=1",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().stories).toHaveLength(1);
+    expect(res.json().pagination.total).toBe(2);
+  });
+
+  it("never exposes drafts through search", async () => {
+    const user = await createUser();
+
+    await createStory(user.id, {
+      title: "Public Malaria Findings",
+      slug: "public-malaria-findings-search",
+      findings: "Malaria transmission was observed.",
+    });
+
+    await createStory(user.id, {
+      title: "Private Malaria Draft",
+      slug: "private-malaria-draft-search",
+      status: "DRAFT",
+      publishedAt: null,
+      findings: "Malaria transmission was observed.",
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/feed?q=malaria",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().stories).toHaveLength(1);
+    expect(res.json().stories[0].title).toBe("Public Malaria Findings");
+  });
+
+  it("rejects invalid classification and excessively long search queries", async () => {
+    const invalidClassification = await app.inject({
+      method: "GET",
+      url: "/stories/feed?classification=NOT_A_REAL_CLASSIFICATION",
+    });
+
+    const excessiveQuery = await app.inject({
+      method: "GET",
+      url: `/stories/feed?q=${"a".repeat(201)}`,
+    });
+
+    expect(invalidClassification.statusCode).toBe(400);
+    expect(excessiveQuery.statusCode).toBe(400);
+  });
 });
 
 
