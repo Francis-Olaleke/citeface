@@ -4,6 +4,7 @@ import cookie from "@fastify/cookie";
 import { prisma } from "./plugins/database.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import storiesRoutes from "./modules/stories/stories.routes.js";
+import researchersRoutes from "./modules/researchers/researchers.routes.js";
 
 export async function buildApp(
   opts: { logger?: boolean; disconnectOnClose?: boolean } = {},
@@ -21,6 +22,7 @@ const app = Fastify({
 
   await app.register(cookie);
   await app.register(storiesRoutes, { prefix: "/stories" });
+  await app.register(researchersRoutes, { prefix: "/researchers" });
 
   app.decorate("prisma", prisma);
 

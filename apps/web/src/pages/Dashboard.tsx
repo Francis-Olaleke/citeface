@@ -67,23 +67,41 @@ function StoryCard({ story }: { story: FeedStory }) {
   return (
     <article className="panel story-card">
       <div className="story-card-header">
-        <div className="profile-avatar">
-          {getInitials(creator.displayName || "Citeface")}
-        </div>
+        <Link
+          className="story-researcher-avatar-link"
+          to={`/researchers/${encodeURIComponent(creator.username)}`}
+          aria-label={`View ${creator.displayName}'s researcher profile`}
+        >
+          <div className="profile-avatar story-researcher-avatar">
+            {profile?.profileImageUrl && (
+              <img
+                src={profile.profileImageUrl}
+                alt=""
+                onError={(event) => event.currentTarget.remove()}
+              />
+            )}
+            <span>{getInitials(creator.displayName || "Citeface")}</span>
+          </div>
+        </Link>
 
         <div className="story-author">
-          <div className="story-author-name">
-            <strong>{creator.displayName}</strong>
-            {profile?.isVerified && (
-              <span className="verified-mark" title="Verified researcher">
-                ✓
-              </span>
-            )}
-          </div>
+          <Link
+            className="story-researcher-link"
+            to={`/researchers/${encodeURIComponent(creator.username)}`}
+          >
+            <div className="story-author-name">
+              <strong>{creator.displayName}</strong>
+              {profile?.isVerified && (
+                <span className="verified-mark" title="Verified researcher">
+                  ✓
+                </span>
+              )}
+            </div>
 
-          <span className="story-author-username">
-            @{creator.username}
-          </span>
+            <span className="story-author-username">
+              @{creator.username}
+            </span>
+          </Link>
 
           {profile?.headline && (
             <span className="story-author-headline">
@@ -91,7 +109,6 @@ function StoryCard({ story }: { story: FeedStory }) {
             </span>
           )}
         </div>
-
         <span className="story-date">
           {formatPublishedDate(story.publishedAt)}
         </span>
@@ -142,10 +159,10 @@ function StoryCard({ story }: { story: FeedStory }) {
 
       <div className="story-footer">
         <span>
-          ♡ {formatCount(story._count.reactions)} appreciations
+          â™¡ {formatCount(story._count.reactions)} appreciations
         </span>
         <span>
-          ◯ {formatCount(story._count.comments)} questions and comments
+          â—¯ {formatCount(story._count.comments)} questions and comments
         </span>
       </div>
     </article>
@@ -371,42 +388,42 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 type="button"
                 aria-current="page"
               >
-                <span className="nav-symbol">⌂</span>
+                <span className="nav-symbol">âŒ‚</span>
                 Home
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">⌕</span>
+                <span className="nav-symbol">âŒ•</span>
                 Discover
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">♧</span>
+                <span className="nav-symbol">â™§</span>
                 My Network
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">▤</span>
+                <span className="nav-symbol">â–¤</span>
                 Messages
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">♡</span>
+                <span className="nav-symbol">â™¡</span>
                 Saved
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">▣</span>
+                <span className="nav-symbol">â–£</span>
                 My Research
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">◎</span>
+                <span className="nav-symbol">â—Ž</span>
                 Communities
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">✦</span>
+                <span className="nav-symbol">âœ¦</span>
                 Opportunities
               </button>
             </nav>
@@ -491,7 +508,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         type="button"
         disabled
       >
-        ▷ Video
+        â–· Video
       </button>
 
       <button
@@ -499,7 +516,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         type="button"
         disabled
       >
-        ▧ Image / Slides
+        â–§ Image / Slides
       </button>
 
       <button
@@ -507,7 +524,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         type="button"
         onClick={() => setShowStoryComposer(true)}
       >
-        ▤ Research Story
+        â–¤ Research Story
       </button>
     </div>
   </section>
@@ -570,7 +587,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 
           {!loadingStories && !feedError && stories.length === 0 && (
             <section className="panel feed-empty">
-              <div className="empty-icon">✧</div>
+              <div className="empty-icon">âœ§</div>
               <h3>
                 {debouncedSearch || classificationFilter
                   ? "No matching research stories"

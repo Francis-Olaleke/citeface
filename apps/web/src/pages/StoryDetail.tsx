@@ -175,10 +175,14 @@ function StoryDetail() {
 
             <div className="detail-byline">
               <div>
-                <strong>{story.creator.displayName}</strong>
-                <span>@{story.creator.username}</span>
+                <Link
+                  className="detail-researcher-link"
+                  to={`/researchers/${encodeURIComponent(story.creator.username)}`}
+                >
+                  <strong>{story.creator.displayName}</strong>
+                  <span>@{story.creator.username}</span>
+                </Link>
               </div>
-
               <time dateTime={story.publishedAt}>
                 Published {formatDate(story.publishedAt)}
               </time>
@@ -255,10 +259,10 @@ function StoryDetail() {
                       <small>
                         {item.media.mimeType}
                         {item.media.durationSeconds !== null
-                          ? ` · ${item.media.durationSeconds} seconds`
+                          ? ` Â· ${item.media.durationSeconds} seconds`
                           : ""}
                         {item.media.width && item.media.height
-                          ? ` · ${item.media.width} × ${item.media.height}`
+                          ? ` Â· ${item.media.width} Ã— ${item.media.height}`
                           : ""}
                       </small>
                     </div>

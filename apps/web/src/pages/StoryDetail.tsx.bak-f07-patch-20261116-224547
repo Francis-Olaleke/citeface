@@ -1,0 +1,328 @@
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+
+import {
+  getPublicStory,
+  StoriesServiceError,
+  type PublicStory,
+} from "../services/stories";
+
+import "./story-detail.css";
+
+function formatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function isSafeExternalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+function formatDate(value: string | null) {
+  if (!value) return "Date unavailable";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function ContentSection({
+  title,
+  content,
+}: {
+  title: string;
+  content: string | null;
+}) {
+  if (!content?.trim()) return null;
+
+  return (
+    <section className="detail-section">
+      <h2>{title}</h2>
+      <p>{content}</p>
+    </section>
+  );
+}
+
+function StoryDetail() {
+  const { slug } = useParams<{ slug: string }>();
+
+  const [story, setStory] = useState<PublicStory | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStory() {
+      if (!slug) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      setNotFound(false);
+      setStory(null);
+
+      try {
+        const result = await getPublicStory(slug);
+
+        if (!cancelled) {
+          setStory(result.story);
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        if (err instanceof StoriesServiceError && err.status === 404) {
+          setNotFound(true);
+        } else {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load this research story.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadStory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  return (
+    <div className="story-detail-page">
+      <header className="detail-topbar">
+        <Link className="detail-brand" to="/">
+          <span>Citeface</span>
+          <small>Research. Connect. Discover.</small>
+        </Link>
+
+        <Link className="detail-back-link" to="/">
+          Discover research
+        </Link>
+      </header>
+
+      <main className="detail-main">
+        {loading && (
+          <section className="detail-state" aria-live="polite">
+            <p>Loading research story...</p>
+          </section>
+        )}
+
+        {!loading && notFound && (
+          <section className="detail-state">
+            <h1>Research story not found</h1>
+            <p>
+              This story may be unavailable or may no longer be publicly
+              accessible.
+            </p>
+            <Link to="/">Return to discovery</Link>
+          </section>
+        )}
+
+        {!loading && error && (
+          <section className="detail-state">
+            <h1>Unable to load this story</h1>
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+            >
+              Try again
+            </button>
+            <Link to="/">Return to discovery</Link>
+          </section>
+        )}
+
+        {!loading && story && (
+          <article className="detail-article">
+            <Link className="detail-breadcrumb" to="/">
+              Discover research / Story
+            </Link>
+
+            <div className="detail-classification">
+              {formatLabel(story.classification)}
+            </div>
+
+            <h1 className="detail-title">{story.title}</h1>
+
+            <p className="detail-summary">{story.summary}</p>
+
+            <div className="detail-byline">
+              <div>
+                <strong>{story.creator.displayName}</strong>
+                <span>@{story.creator.username}</span>
+              </div>
+
+              <time dateTime={story.publishedAt}>
+                Published {formatDate(story.publishedAt)}
+              </time>
+            </div>
+
+            {story.authors.length > 0 && (
+              <section className="detail-section">
+                <h2>Authors and contributors</h2>
+
+                <ul className="detail-author-list">
+                  {story.authors.map((author) => (
+                    <li key={author.id}>
+                      <strong>{author.displayName}</strong>
+                      <span>{formatLabel(author.role)}</span>
+                      {author.affiliationText && (
+                        <small>{author.affiliationText}</small>
+                      )}
+                      {author.isCorresponding && (
+                        <small>Corresponding author</small>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <ContentSection
+              title="Research question"
+              content={story.researchQuestion}
+            />
+
+            <ContentSection
+              title="Methodology"
+              content={story.methodology}
+            />
+
+            <ContentSection
+              title="Findings"
+              content={story.findings}
+            />
+
+            <ContentSection
+              title="Significance"
+              content={story.significance}
+            />
+
+            <ContentSection
+              title="Limitations"
+              content={story.limitations}
+            />
+
+            {story.topics.length > 0 && (
+              <section className="detail-section">
+                <h2>Research topics</h2>
+                <div className="detail-topics">
+                  {story.topics.map(({ topic }) => (
+                    <span key={topic.id}>{topic.name}</span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {story.media.length > 0 && (
+              <section className="detail-section">
+                <h2>Attached media</h2>
+
+                <div className="detail-media-list">
+                  {story.media.map((item) => (
+                    <div className="detail-media-item" key={item.id}>
+                      <strong>{formatLabel(item.media.type)}</strong>
+
+                      {item.caption && <p>{item.caption}</p>}
+
+                      <small>
+                        {item.media.mimeType}
+                        {item.media.durationSeconds !== null
+                          ? ` · ${item.media.durationSeconds} seconds`
+                          : ""}
+                        {item.media.width && item.media.height
+                          ? ` · ${item.media.width} × ${item.media.height}`
+                          : ""}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {story.sources.length > 0 && (
+              <section className="detail-section">
+                <h2>Sources and references</h2>
+
+                <div className="detail-sources">
+                  {story.sources.map((source) => (
+                    <div className="detail-source" key={source.id}>
+                      <strong>
+                        {source.title || formatLabel(source.type)}
+                      </strong>
+
+                      {source.authorsText && (
+                        <p>{source.authorsText}</p>
+                      )}
+
+                      {source.journal && <p>{source.journal}</p>}
+
+                      {source.publisher && <p>{source.publisher}</p>}
+
+                      {source.publicationDate && (
+                        <small>
+                          {formatDate(source.publicationDate)}
+                        </small>
+                      )}
+
+                      {source.doi && (
+                        <p>
+                          DOI: <span>{source.doi}</span>
+                        </p>
+                      )}
+
+                      {source.url && isSafeExternalUrl(source.url) && (
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View source
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <footer className="detail-footer">
+              <span>{story._count.reactions} reactions</span>
+              <span>{story._count.comments} comments</span>
+              <span>{story._count.questions} questions</span>
+            </footer>
+          </article>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default StoryDetail;

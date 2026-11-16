@@ -18,6 +18,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import StoryDetail from "./pages/StoryDetail";
+import ResearcherProfile from "./pages/ResearcherProfile";
 
 function ProtectedRoute() {
   const { user, loading, error } = useAuth();
@@ -80,6 +81,7 @@ function App() {
           />
 
           <Route path="/stories/:slug" element={<StoryDetail />} />
+          <Route path="/researchers/:username" element={<ResearcherProfile />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />

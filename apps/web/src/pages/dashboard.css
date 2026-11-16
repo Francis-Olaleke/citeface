@@ -653,3 +653,43 @@ input:disabled {
     gap: 10px;
   }
 }
+
+.story-researcher-avatar-link {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+.story-researcher-avatar {
+  position: relative;
+  overflow: hidden;
+}
+
+.story-researcher-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.story-researcher-avatar span {
+  position: relative;
+}
+
+.story-researcher-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.story-researcher-link:hover strong {
+  color: #185adb;
+}
+
+.story-researcher-link:focus-visible,
+.story-researcher-avatar-link:focus-visible {
+  outline: 2px solid #185adb;
+  outline-offset: 3px;
+  border-radius: 5px;
+}

@@ -270,3 +270,24 @@
     flex-direction: column;
   }
 }
+.detail-researcher-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.detail-researcher-link strong {
+  color: #26344a;
+  font-size: 14px;
+}
+
+.detail-researcher-link span {
+  color: #778195;
+  font-size: 12px;
+}
+
+.detail-researcher-link:hover strong {
+  color: #185adb;
+}
