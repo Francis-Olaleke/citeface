@@ -49,6 +49,11 @@ export async function authenticateUser(email: string, password: string) {
     where: {
       email: email.trim().toLowerCase(),
     },
+    include: {
+      researcherProfile: {
+        select: { profileImageUrl: true },
+      },
+    },
   });
 
   if (!user || !user.passwordHash || user.deletedAt) {
@@ -70,6 +75,7 @@ export async function authenticateUser(email: string, password: string) {
     email: user.email,
     username: user.username,
     displayName: user.displayName,
+    profileImageUrl: user.researcherProfile?.profileImageUrl ?? null,
   };
 }
 
@@ -104,7 +110,13 @@ export async function getSessionUser(token: string) {
       tokenHash,
     },
     include: {
-      user: true,
+      user: {
+        include: {
+          researcherProfile: {
+            select: { profileImageUrl: true },
+          },
+        },
+      },
     },
   });
 
@@ -123,6 +135,7 @@ export async function getSessionUser(token: string) {
     email: session.user.email,
     username: session.user.username,
     displayName: session.user.displayName,
+    profileImageUrl: session.user.researcherProfile?.profileImageUrl ?? null,
   };
 }
 
