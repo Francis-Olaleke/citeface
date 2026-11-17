@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNotification } from "../context/NotificationContext";
 import {
   publishStory,
   type PublishStoryAuthor,
@@ -32,6 +33,7 @@ function PublishStoryForm({
   draftId,
   onPublished,
 }: PublishStoryFormProps) {
+  const { notify } = useNotification();
   const [authors, setAuthors] = useState<AuthorEntry[]>([
     {
       id: 1,
@@ -129,6 +131,7 @@ function PublishStoryForm({
 
     try {
       const result = await publishStory(draftId, payload);
+      notify("Your research story has been published.", { type: "success" });
       onPublished(result.story);
     } catch (err) {
       setError(

@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNotification } from "../context/NotificationContext";
 import {
   createStoryDraft,
   type CreateDraftPayload,
@@ -26,6 +27,7 @@ function ResearchStoryComposer({
   onCreated,
   onCancel,
 }: ResearchStoryComposerProps) {
+  const { notify } = useNotification();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [classification, setClassification] =
@@ -66,6 +68,7 @@ function ResearchStoryComposer({
         limitations: limitations.trim(),
       });
 
+      notify("Your research draft has been created.", { type: "success" });
       onCreated(result.story);
     } catch (err) {
       setError(

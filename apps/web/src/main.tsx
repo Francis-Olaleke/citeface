@@ -11,6 +11,7 @@ import {
 } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -20,6 +21,7 @@ import Dashboard from "./pages/Dashboard";
 import StoryDetail from "./pages/StoryDetail";
 import ResearcherProfile from "./pages/ResearcherProfile";
 import "./styles/design-system.css";
+import "./styles/notifications.css";
 
 function ProtectedRoute() {
   const { user, loading, error } = useAuth();
@@ -64,7 +66,8 @@ function GuestRoute() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <NotificationProvider>
+        <BrowserRouter>
         <Routes>
           <Route element={<GuestRoute />}>
             <Route path="/register" element={<Register />} />
@@ -96,6 +99,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

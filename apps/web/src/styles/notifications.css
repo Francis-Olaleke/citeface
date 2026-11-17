@@ -1,0 +1,128 @@
+/* Citeface shared notification system */
+
+.cf-toast-viewport {
+  position: fixed;
+  z-index: 10000;
+  top: 22px;
+  right: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(390px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.cf-toast {
+  --cf-toast-accent: #2457e6;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 15px;
+  border: 1px solid rgba(36, 87, 230, 0.12);
+  border-left: 4px solid var(--cf-toast-accent);
+  border-radius: var(--cf-radius-md, 16px);
+  background: #ffffff;
+  color: #172449;
+  box-shadow: 0 12px 34px rgba(23, 36, 73, 0.15);
+  pointer-events: auto;
+  animation: cf-toast-enter 220ms ease-out both;
+}
+
+.cf-toast--success {
+  --cf-toast-accent: #119d78;
+}
+
+.cf-toast--error {
+  --cf-toast-accent: #df5264;
+}
+
+.cf-toast--info {
+  --cf-toast-accent: #2457e6;
+}
+
+.cf-toast__symbol {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cf-toast-accent) 12%, white);
+  color: var(--cf-toast-accent);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.cf-toast__message {
+  flex: 1;
+  margin: 0;
+  font-family: var(--cf-font-body, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.cf-toast__close {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #77819a;
+  cursor: pointer;
+  font-size: 23px;
+  line-height: 1;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.cf-toast__close:hover {
+  background: #f0f3fa;
+  color: #172449;
+}
+
+.cf-toast__close:focus-visible {
+  outline: 3px solid rgba(36, 87, 230, 0.35);
+  outline-offset: 2px;
+}
+
+@keyframes cf-toast-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(12px, -5px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (max-width: 600px) {
+  .cf-toast-viewport {
+    top: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .cf-toast {
+    padding: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-toast {
+    animation: none;
+  }
+
+  .cf-toast__close {
+    transition: none;
+  }
+}

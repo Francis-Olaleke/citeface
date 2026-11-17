@@ -1,4 +1,5 @@
 import PublishStoryForm from "./PublishStoryForm";
+import { useNotification } from "../context/NotificationContext";
 import { useEffect, useState } from "react";
 import {
   updateStoryDraft,
@@ -47,6 +48,7 @@ function ResearchDraftEditor({
   onSaved,
   onPublished,
 }: ResearchDraftEditorProps) {
+  const { notify } = useNotification();
   const [title, setTitle] = useState(draft.title);
   const [summary, setSummary] = useState(draft.summary);
   const [classification, setClassification] = useState(
@@ -68,7 +70,7 @@ function ResearchDraftEditor({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+
 
   useEffect(() => {
     setTitle(draft.title);
@@ -80,7 +82,7 @@ function ResearchDraftEditor({
     setSignificance(draft.significance ?? "");
     setLimitations(draft.limitations ?? "");
     setError("");
-    setSuccess("");
+
   }, [draft.id, draft.updatedAt]);
 
   const hasChanges =
@@ -99,7 +101,7 @@ function ResearchDraftEditor({
     event.preventDefault();
 
     setError("");
-    setSuccess("");
+
 
     if (!title.trim() || !summary.trim()) {
       setError("Title and summary are required.");
@@ -126,7 +128,7 @@ function ResearchDraftEditor({
         changeNote: "Updated through the Citeface research editor",
       });
 
-      setSuccess("Your research draft has been saved.");
+      notify("Your research draft has been saved.", { type: "success" });
       onSaved(result.story);
     } catch (err) {
       setError(
@@ -288,14 +290,6 @@ function ResearchDraftEditor({
           </p>
         )}
 
-        {success && (
-          <p
-            className="research-editor-message success"
-            role="status"
-          >
-            {success}
-          </p>
-        )}
 
         <div className="research-editor-actions">
           <button
