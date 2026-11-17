@@ -1,4 +1,4 @@
-﻿
+
 import type { FastifyPluginAsync } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../../plugins/database.js";
@@ -686,12 +686,19 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
           createdAt: true,
           updatedAt: true,
           creator: {
-        select: {
-          id: true,
-          username: true,
-          displayName: true,
-      },
-    },
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              researcherProfile: {
+                select: {
+                  headline: true,
+                  profileImageUrl: true,
+                  isVerified: true,
+                },
+              },
+            },
+          },
           authors: {
             orderBy: { sortOrder: "asc" },
             select: {

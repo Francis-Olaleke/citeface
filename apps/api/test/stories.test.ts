@@ -107,6 +107,15 @@ describe("F-04 discovery feed", () => {
   it("returns published research stories with creator information", async () => {
     const user = await createUser();
 
+        await prisma.researcherProfile.create({
+      data: {
+        userId: user.id,
+        headline: "Molecular Biology Researcher",
+        profileImageUrl: "https://res.cloudinary.com/test/image/upload/profile.png",
+        isVerified: true,
+      },
+    });
+
     await createStory(user.id, {
       title: "Understanding Malaria Transmission",
       slug: "understanding-malaria-transmission",
@@ -127,6 +136,11 @@ describe("F-04 discovery feed", () => {
       "Understanding Malaria Transmission",
     );
     expect(body.stories[0].creator.username).toBe("feeduser1");
+    expect(body.stories[0].creator.researcherProfile).toMatchObject({
+      headline: "Molecular Biology Researcher",
+      profileImageUrl: "https://res.cloudinary.com/test/image/upload/profile.png",
+      isVerified: true,
+    });
 
     expect(body.pagination).toMatchObject({
       page: 1,
