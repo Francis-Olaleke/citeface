@@ -160,10 +160,10 @@ function StoryCard({ story }: { story: FeedStory }) {
 
       <div className="story-footer">
         <span>
-          â™¡ {formatCount(story._count.reactions)} appreciations
+          ♡ {formatCount(story._count.reactions)} appreciations
         </span>
         <span>
-          â—¯ {formatCount(story._count.comments)} questions and comments
+          ○ {formatCount(story._count.comments)} questions and comments
         </span>
       </div>
     </article>
@@ -445,42 +445,42 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 type="button"
                 aria-current="page"
               >
-                <span className="nav-symbol">âŒ‚</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 Home
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">âŒ•</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 Discover
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">â™§</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 My Network
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">â–¤</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 Messages
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">â™¡</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 Saved
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">â–£</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 My Research
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">â—Ž</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 Communities
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol">âœ¦</span>
+                <span className="nav-symbol" aria-hidden="true"></span>
                 Opportunities
               </button>
             </nav>
@@ -573,7 +573,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         type="button"
         disabled
       >
-        â–· Video
+        Video
       </button>
 
       <button
@@ -581,7 +581,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         type="button"
         disabled
       >
-        â–§ Image / Slides
+        Image / Slides
       </button>
 
       <button
@@ -589,7 +589,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         type="button"
         onClick={() => setShowStoryComposer(true)}
       >
-        â–¤ Research Story
+        Research Story
       </button>
     </div>
   </section>
@@ -652,7 +652,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 
           {!loadingStories && !feedError && stories.length === 0 && (
             <section className="panel feed-empty">
-              <div className="empty-icon">âœ§</div>
+              <div className="empty-icon">*</div>
               <h3>
                 {debouncedSearch || classificationFilter
                   ? "No matching research stories"

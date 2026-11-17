@@ -259,10 +259,10 @@ function StoryDetail() {
                       <small>
                         {item.media.mimeType}
                         {item.media.durationSeconds !== null
-                          ? ` Â· ${item.media.durationSeconds} seconds`
+                          ? ` · ${item.media.durationSeconds} seconds`
                           : ""}
                         {item.media.width && item.media.height
-                          ? ` Â· ${item.media.width} Ã— ${item.media.height}`
+                          ? ` · ${item.media.width} × ${item.media.height}`
                           : ""}
                       </small>
                     </div>
