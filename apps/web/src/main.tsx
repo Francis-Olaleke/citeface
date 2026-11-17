@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import StoryDetail from "./pages/StoryDetail";
 import ResearcherProfile from "./pages/ResearcherProfile";
+import "./styles/design-system.css";
 
 function ProtectedRoute() {
   const { user, loading, error } = useAuth();
