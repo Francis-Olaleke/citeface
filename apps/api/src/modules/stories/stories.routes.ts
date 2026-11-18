@@ -607,6 +607,289 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ drafts });
   });
 
+  // F-05.5: Edit a published story within the original 15-minute window.
+  app.patch<{ Params: { id: string }; Body: UpdateStoryBody }>(
+    "/:id/published",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          minProperties: 1,
+          additionalProperties: false,
+          properties: {
+            title: { type: "string", minLength: 1, maxLength: 200 },
+            summary: { type: "string", minLength: 1, maxLength: 500 },
+            classification: {
+              type: "string",
+              enum: [
+                "PEER_REVIEWED_ARTICLE",
+                "PREPRINT",
+                "THESIS_DISSERTATION",
+                "CONFERENCE_PAPER",
+                "RESEARCH_REPORT",
+                "AUTHOR_DESCRIBED_PROJECT",
+                "PRELIMINARY_UNPUBLISHED",
+              ],
+            },
+            researchQuestion: { type: ["string", "null"], maxLength: 10000 },
+            methodology: { type: ["string", "null"], maxLength: 10000 },
+            findings: { type: ["string", "null"], maxLength: 10000 },
+            significance: { type: ["string", "null"], maxLength: 10000 },
+            limitations: { type: ["string", "null"], maxLength: 10000 },
+            changeNote: { type: "string", maxLength: 2000 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({ error: "Authentication required" });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({
+          error: "Your session is invalid or has expired",
+        });
+      }
+
+      const existing = await prisma.researchStory.findFirst({
+        where: {
+          id: request.params.id,
+          creatorId: user.id,
+          status: "PUBLISHED",
+          deletedAt: null,
+          archivedAt: null,
+          retractedAt: null,
+          retraction: { is: null },
+        },
+      });
+
+      if (!existing) {
+        return reply.code(404).send({
+          error: "Not Found",
+          message: "Research story not found.",
+        });
+      }
+
+      const editWindowMs = 15 * 60 * 1000;
+
+      if (
+        !existing.publishedAt ||
+        Date.now() - existing.publishedAt.getTime() >= editWindowMs
+      ) {
+        return reply.code(403).send({
+          error: "Published story editing window has expired.",
+        });
+      }
+
+      const body = request.body;
+      const data: Record<string, unknown> = {};
+
+      if (body.title !== undefined) data.title = body.title.trim();
+      if (body.summary !== undefined) data.summary = body.summary.trim();
+      if (body.classification !== undefined) {
+        data.classification = body.classification;
+      }
+
+      for (const field of [
+        "researchQuestion",
+        "methodology",
+        "findings",
+        "significance",
+        "limitations",
+      ] as const) {
+        if (body[field] !== undefined) {
+          const value = body[field];
+          data[field] = value === null ? null : value.trim() || null;
+        }
+      }
+
+      if (data.title === "") {
+        return reply.code(400).send({ error: "Title cannot be empty." });
+      }
+
+      if (data.summary === "") {
+        return reply.code(400).send({ error: "Summary cannot be empty." });
+      }
+
+      if (Object.keys(data).length === 0) {
+        return reply.code(400).send({
+          error: "At least one story field must be changed.",
+        });
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const current = await tx.researchStory.findFirst({
+          where: {
+            id: existing.id,
+            creatorId: user.id,
+            status: "PUBLISHED",
+            deletedAt: null,
+            archivedAt: null,
+            retractedAt: null,
+            retraction: { is: null },
+          },
+        });
+
+        if (
+          !current ||
+          !current.publishedAt ||
+          Date.now() - current.publishedAt.getTime() >= editWindowMs
+        ) {
+          return null;
+        }
+
+        const latestVersion = await tx.storyVersion.findFirst({
+          where: { storyId: current.id },
+          orderBy: { versionNumber: "desc" },
+          select: { versionNumber: true },
+        });
+
+        const versionNumber = (latestVersion?.versionNumber ?? 0) + 1;
+
+        await tx.storyVersion.create({
+          data: {
+            storyId: current.id,
+            versionNumber,
+            title: current.title,
+            summary: current.summary,
+            researchQuestion: current.researchQuestion,
+            methodology: current.methodology,
+            findings: current.findings,
+            significance: current.significance,
+            limitations: current.limitations,
+            changeNote: body.changeNote?.trim() || null,
+            createdById: user.id,
+          },
+        });
+
+        const result = await tx.researchStory.update({
+          where: { id: current.id },
+          data,
+        });
+
+        await tx.auditEvent.create({
+          data: {
+            actorId: user.id,
+            action: "STORY_PUBLISHED_EDITED",
+            entityType: "ResearchStory",
+            entityId: current.id,
+            metadata: {
+              versionNumber,
+              changeNote: body.changeNote?.trim() || null,
+            },
+          },
+        });
+
+        return result;
+      });
+
+      if (!updated) {
+        return reply.code(403).send({
+          error: "Published story editing window has expired.",
+        });
+      }
+
+      return reply.send({ story: updated });
+    },
+  );
+
+  // F-05.5: Soft-delete an owner's published research story.
+  app.delete<{ Params: { id: string } }>(
+    "/:id",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({ error: "Authentication required" });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({
+          error: "Your session is invalid or has expired",
+        });
+      }
+
+      const existing = await prisma.researchStory.findFirst({
+        where: {
+          id: request.params.id,
+          creatorId: user.id,
+          status: "PUBLISHED",
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return reply.code(404).send({
+          error: "Not Found",
+          message: "Research story not found.",
+        });
+      }
+
+      await prisma.$transaction(async (tx) => {
+        const current = await tx.researchStory.findFirst({
+          where: {
+            id: existing.id,
+            creatorId: user.id,
+            status: "PUBLISHED",
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+
+        if (!current) return false;
+
+        await tx.researchStory.update({
+          where: { id: current.id },
+          data: { deletedAt: new Date() },
+        });
+
+        await tx.auditEvent.create({
+          data: {
+            actorId: user.id,
+            action: "STORY_PUBLISHED_SOFT_DELETED",
+            entityType: "ResearchStory",
+            entityId: current.id,
+          },
+        });
+
+        return true;
+      }).then((deleted) => {
+        if (!deleted) {
+          throw new Error("Research story is no longer available.");
+        }
+      });
+
+      return reply.send({ success: true });
+    },
+  );
   // F-04: Public discovery feed.
   app.get<{ Querystring: FeedQuery }>(
   "/feed",

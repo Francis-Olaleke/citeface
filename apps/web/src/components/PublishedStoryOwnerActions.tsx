@@ -48,7 +48,7 @@ export function PublishedStoryOwnerActions({
   const publishedAt = new Date(story.publishedAt).getTime();
   const editWindowOpen =
     Number.isFinite(publishedAt) &&
-    Date.now() - publishedAt <= EDIT_WINDOW_MS;
+    Date.now() - publishedAt < EDIT_WINDOW_MS;
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

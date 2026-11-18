@@ -1,0 +1,135 @@
+.cf-owner-actions {
+  margin: 1.5rem 0;
+  padding: 1.2rem;
+  border: 1px solid var(--cf-border, #dce4f2);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f2f6ff 0%, #fff8f1 100%);
+}
+
+.cf-owner-actions__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cf-owner-actions__bar strong {
+  color: var(--cf-text, #17233b);
+}
+
+.cf-owner-actions__bar p {
+  margin: 0.35rem 0 0;
+  color: var(--cf-muted, #64748b);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.cf-owner-actions__buttons,
+.cf-owner-actions__form-buttons {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.cf-owner-actions button {
+  min-height: 40px;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+
+.cf-owner-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.cf-owner-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cf-owner-actions__edit,
+.cf-owner-actions__save {
+  color: #fff;
+  background: #185adb;
+}
+
+.cf-owner-actions__delete {
+  color: #a12d27;
+  background: #fff0ee;
+  border: 1px solid #f2c7c2 !important;
+}
+
+.cf-owner-actions__cancel {
+  color: #34445f;
+  background: #edf1f7;
+}
+
+.cf-owner-actions__form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #dce4f2;
+}
+
+.cf-owner-actions__form label {
+  display: grid;
+  gap: 0.45rem;
+  color: #263550;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.cf-owner-actions__form label span {
+  color: #718096;
+  font-weight: 400;
+}
+
+.cf-owner-actions__form input,
+.cf-owner-actions__form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #17233b;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.cf-owner-actions__form input:focus,
+.cf-owner-actions__form textarea:focus {
+  outline: 3px solid rgb(24 90 219 / 14%);
+  border-color: #185adb;
+}
+
+.cf-owner-actions__form-buttons {
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .cf-owner-actions {
+    padding: 1rem;
+  }
+
+  .cf-owner-actions__buttons {
+    width: 100%;
+  }
+
+  .cf-owner-actions__buttons button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-owner-actions button {
+    transition: none;
+  }
+}

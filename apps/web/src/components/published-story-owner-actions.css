@@ -59,9 +59,25 @@
 }
 
 .cf-owner-actions__delete {
-  color: #a12d27;
-  background: #fff0ee;
-  border: 1px solid #f2c7c2 !important;
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
+  color: #788397;
+  background: transparent;
+  border: 1px solid transparent !important;
+  font-size: 0.88rem;
+  font-weight: 550;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.cf-owner-actions__delete:hover:not(:disabled),
+.cf-owner-actions__delete:focus-visible {
+  color: #b42318;
+  background: #fff5f3;
+}
+
+.cf-owner-actions__delete:focus-visible {
+  outline: 2px solid #e6a29b;
+  outline-offset: 2px;
 }
 
 .cf-owner-actions__cancel {

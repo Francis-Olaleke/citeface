@@ -1391,3 +1391,217 @@ describe("F-06 public research story detail", () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe("F-05.5 published story owner actions", () => {
+  it("allows the owner to edit within 15 minutes and preserves the previous version", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const story = await createStory(user.id, {
+      title: "Original published title",
+      slug: "owner-edit-within-window",
+      publishedAt: new Date(Date.now() - 5 * 60 * 1000),
+    });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/stories/${story.id}/published`,
+      cookies: cookie,
+      payload: {
+        title: "Updated published title",
+        changeNote: "Correcting the original title.",
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().story.title).toBe("Updated published title");
+
+    const version = await prisma.storyVersion.findFirstOrThrow({
+      where: { storyId: story.id },
+    });
+
+    expect(version).toMatchObject({
+      versionNumber: 1,
+      title: "Original published title",
+      changeNote: "Correcting the original title.",
+      createdById: user.id,
+    });
+
+    const audit = await prisma.auditEvent.findFirst({
+      where: {
+        action: "STORY_PUBLISHED_EDITED",
+        entityId: story.id,
+      },
+    });
+
+    expect(audit).not.toBeNull();
+  });
+
+  it("rejects edits after the 15-minute window expires", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const story = await createStory(user.id, {
+      title: "Expired edit story",
+      slug: "owner-edit-expired",
+      publishedAt: new Date(Date.now() - 16 * 60 * 1000),
+    });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/stories/${story.id}/published`,
+      cookies: cookie,
+      payload: { title: "Should not be accepted" },
+    });
+
+    expect(res.statusCode).toBe(403);
+
+    const unchanged = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: story.id },
+    });
+    expect(unchanged.title).toBe("Expired edit story");
+
+    expect(
+      await prisma.storyVersion.count({ where: { storyId: story.id } }),
+    ).toBe(0);
+  });
+
+  it("prevents another researcher from editing the owner's published story", async () => {
+    const owner = await registerAndLogin(app, 1);
+    const other = await registerAndLogin(app, 2);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const story = await createStory(user.id, {
+      title: "Private owner edit target",
+      slug: "non-owner-edit-target",
+    });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/stories/${story.id}/published`,
+      cookies: other.cookie,
+      payload: { title: "Unauthorized change" },
+    });
+
+    expect(res.statusCode).toBe(404);
+
+    const unchanged = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: story.id },
+    });
+    expect(unchanged.title).toBe("Private owner edit target");
+
+    expect(
+      await prisma.storyVersion.count({ where: { storyId: story.id } }),
+    ).toBe(0);
+  });
+
+  it("allows the owner to soft-delete a published story at any age and audits it", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const story = await createStory(user.id, {
+      title: "Story to soft delete",
+      slug: "owner-soft-delete-target",
+      publishedAt: new Date(Date.now() - 30 * 60 * 1000),
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/stories/${story.id}`,
+      cookies: cookie,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ success: true });
+
+    const deleted = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: story.id },
+    });
+    expect(deleted.deletedAt).toBeInstanceOf(Date);
+
+    const audit = await prisma.auditEvent.findFirst({
+      where: {
+        action: "STORY_PUBLISHED_SOFT_DELETED",
+        entityId: story.id,
+      },
+    });
+    expect(audit).not.toBeNull();
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/stories/${story.slug}`,
+    });
+    expect(detail.statusCode).toBe(404);
+
+    const feed = await app.inject({
+      method: "GET",
+      url: "/stories/feed",
+    });
+    expect(
+      feed.json().stories.some((item: { id: string }) => item.id === story.id),
+    ).toBe(false);
+  });
+
+  it("prevents another researcher from deleting the owner's published story", async () => {
+    const owner = await registerAndLogin(app, 1);
+    const other = await registerAndLogin(app, 2);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+
+    const story = await createStory(user.id, {
+      title: "Protected published story",
+      slug: "non-owner-delete-target",
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/stories/${story.id}`,
+      cookies: other.cookie,
+    });
+
+    expect(res.statusCode).toBe(404);
+
+    const unchanged = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: story.id },
+    });
+    expect(unchanged.deletedAt).toBeNull();
+  });
+
+  it("requires authentication for published-story edits and deletion", async () => {
+    const user = await createUser();
+    const story = await createStory(user.id, {
+      slug: "unauthenticated-owner-actions",
+    });
+
+    const edit = await app.inject({
+      method: "PATCH",
+      url: `/stories/${story.id}/published`,
+      payload: { title: "Unauthenticated edit" },
+    });
+
+    const deletion = await app.inject({
+      method: "DELETE",
+      url: `/stories/${story.id}`,
+    });
+
+    expect(edit.statusCode).toBe(401);
+    expect(deletion.statusCode).toBe(401);
+
+    const unchanged = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: story.id },
+    });
+    expect(unchanged.deletedAt).toBeNull();
+    expect(unchanged.title).toBe("Test Research Story");
+  });
+});
