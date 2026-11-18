@@ -1,0 +1,225 @@
+import { v2 as cloudinary } from "cloudinary";
+import { prisma } from "../../plugins/database.js";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const BATCH_SIZE = 100;
+
+type RetentionAsset = {
+  id: string;
+  storageKey: string;
+  storageProvider: string;
+  type: string;
+  processingStatus: string;
+  createdAt: Date;
+  deletedAt: Date | null;
+  stories: Array<{
+    story: {
+      status: string;
+      deletedAt: Date | null;
+      publishedAt: Date | null;
+      archivedAt: Date | null;
+      retractedAt: Date | null;
+    };
+  }>;
+};
+
+function isAbandonedUpload(asset: RetentionAsset, now: Date) {
+  const cutoff = new Date(now.getTime() - DAY_MS);
+
+  return (
+    (asset.processingStatus === "PENDING_UPLOAD" ||
+      asset.processingStatus === "UPLOADING") &&
+    asset.createdAt <= cutoff &&
+    asset.stories.length === 0
+  );
+}
+
+function isExpiredDeletedDraftMedia(asset: RetentionAsset, now: Date) {
+  const cutoff = new Date(now.getTime() - 7 * DAY_MS);
+
+  return (
+    asset.stories.length > 0 &&
+    asset.stories.every(({ story }) =>
+      story.status === "DRAFT" &&
+      story.deletedAt !== null &&
+      story.deletedAt <= cutoff &&
+      story.publishedAt === null &&
+      story.archivedAt === null &&
+      story.retractedAt === null
+    )
+  );
+}
+
+function isRetentionEligible(asset: RetentionAsset, now: Date) {
+  return (
+    isAbandonedUpload(asset, now) ||
+    isExpiredDeletedDraftMedia(asset, now)
+  );
+}
+
+function configureCloudinary() {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Cloudinary is not configured for media retention.");
+  }
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  });
+}
+
+async function deleteCloudinaryAsset(asset: RetentionAsset) {
+  if (
+    asset.storageProvider !== "cloudinary" ||
+    !asset.storageKey.startsWith("citeface/story-media/")
+  ) {
+    throw new Error("Refusing to delete an asset outside the story-media namespace.");
+  }
+
+  const resourceType = asset.type === "VIDEO" ? "video" : "image";
+
+  const response = await cloudinary.api.delete_resources(
+    [asset.storageKey],
+    {
+      resource_type: resourceType,
+      type: "authenticated",
+      invalidate: true,
+    },
+  ) as { deleted?: Record<string, string> };
+
+  const result = response.deleted?.[asset.storageKey];
+
+  // not_found is an idempotent success: a previous attempt may have
+  // deleted the provider asset before its database update completed.
+  if (result !== "deleted" && result !== "not_found") {
+    throw new Error(
+      `Cloudinary did not confirm deletion of media asset ${asset.id}.`,
+    );
+  }
+}
+
+export interface MediaRetentionResult {
+  examined: number;
+  deleted: number;
+  skipped: number;
+  failed: number;
+}
+
+export async function runMediaRetentionCleanup(
+  now = new Date(),
+): Promise<MediaRetentionResult> {
+  if (Number.isNaN(now.getTime())) {
+    throw new Error("A valid cleanup timestamp is required.");
+  }
+
+  configureCloudinary();
+
+  const candidates = await prisma.mediaAsset.findMany({
+    where: {
+      storageProvider: "cloudinary",
+      deletedAt: null,
+      createdAt: {
+        lte: new Date(now.getTime() - DAY_MS),
+      },
+    },
+    include: {
+      stories: {
+        include: {
+          story: {
+            select: {
+              status: true,
+              deletedAt: true,
+              publishedAt: true,
+              archivedAt: true,
+              retractedAt: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    take: BATCH_SIZE,
+  });
+
+  const result: MediaRetentionResult = {
+    examined: candidates.length,
+    deleted: 0,
+    skipped: 0,
+    failed: 0,
+  };
+
+  for (const candidate of candidates) {
+    const asset = candidate as RetentionAsset;
+
+    if (!isRetentionEligible(asset, now)) {
+      result.skipped += 1;
+      continue;
+    }
+
+    try {
+      // Keep the database transaction open while deleting the provider
+      // asset. This ensures the eligibility check and soft-delete update
+      // are performed together. Provider deletion is idempotent, so a
+      // database failure can safely be retried on the next scheduled run.
+      const deleted = await prisma.$transaction(async (tx) => {
+        const current = await tx.mediaAsset.findUnique({
+          where: { id: asset.id },
+          include: {
+            stories: {
+              include: {
+                story: {
+                  select: {
+                    status: true,
+                    deletedAt: true,
+                    publishedAt: true,
+                    archivedAt: true,
+                    retractedAt: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (
+          !current ||
+          current.deletedAt !== null ||
+          !isRetentionEligible(current as RetentionAsset, now)
+        ) {
+          return false;
+        }
+
+        await deleteCloudinaryAsset(current as RetentionAsset);
+
+        const update = await tx.mediaAsset.updateMany({
+          where: {
+            id: asset.id,
+            deletedAt: null,
+          },
+          data: {
+            deletedAt: now,
+          },
+        });
+
+        return update.count === 1;
+      });
+
+      if (deleted) {
+        result.deleted += 1;
+      } else {
+        result.skipped += 1;
+      }
+    } catch {
+      // Preserve the database record when provider deletion fails.
+      // The next scheduled run can retry this candidate.
+      result.failed += 1;
+    }
+  }
+
+  return result;
+}

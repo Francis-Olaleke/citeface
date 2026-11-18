@@ -1,0 +1,261 @@
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import type { FastifyInstance } from "fastify";
+import { randomInt } from "node:crypto";
+
+import { prisma } from "../src/plugins/database.js";
+import { makeApp, registerAndLogin } from "./helpers.js";
+import { runMediaRetentionCleanup } from "../src/modules/media/media-retention.service.js";
+
+const cloudinaryMock = vi.hoisted(() => ({
+  config: vi.fn(),
+  api: {
+    delete_resources: vi.fn(),
+  },
+}));
+
+vi.mock("cloudinary", () => ({
+  v2: cloudinaryMock,
+}));
+
+let app: FastifyInstance;
+
+function uniqueNumber() {
+  return randomInt(100_000_000, 2_000_000_000);
+}
+
+async function createUploadIntent() {
+  const auth = await registerAndLogin(app, uniqueNumber());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/media/upload-intents",
+    cookies: auth.cookie,
+    payload: {
+      originalName: "retention-test.png",
+      mimeType: "image/png",
+      sizeBytes: 1024,
+    },
+  });
+
+  expect(response.statusCode).toBe(201);
+
+  const intent = response.json();
+
+  const asset = await prisma.mediaAsset.findUniqueOrThrow({
+    where: { id: intent.mediaId },
+  });
+
+  return { intent, asset };
+}
+
+async function createDraftStory(
+  creatorId: string,
+  options: {
+    deletedAt: Date | null;
+    publishedAt?: Date | null;
+    status?: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "RETRACTED";
+  },
+) {
+  return prisma.researchStory.create({
+    data: {
+      creatorId,
+      title: "Retention test story",
+      slug: `retention-test-${uniqueNumber()}`,
+      summary: "A story used to test media retention.",
+      classification: "RESEARCH_REPORT",
+      status: options.status ?? "DRAFT",
+      publishedAt: options.publishedAt ?? null,
+      deletedAt: options.deletedAt,
+    },
+  });
+}
+
+async function attachAsset(storyId: string, mediaAssetId: string) {
+  await prisma.storyMedia.create({
+    data: {
+      storyId,
+      mediaAssetId,
+    },
+  });
+}
+
+beforeAll(async () => {
+  app = await makeApp();
+});
+
+beforeEach(() => {
+  process.env.CLOUDINARY_CLOUD_NAME = "citeface-test";
+  process.env.CLOUDINARY_API_KEY = "test-api-key";
+  process.env.CLOUDINARY_API_SECRET = "test-api-secret";
+
+  cloudinaryMock.config.mockClear();
+  cloudinaryMock.api.delete_resources.mockReset();
+  cloudinaryMock.api.delete_resources.mockImplementation(
+    async (publicIds: string[]) => ({
+      deleted: { [publicIds[0]]: "deleted" },
+    }),
+  );
+});
+
+afterAll(async () => {
+  await app.close();
+});
+
+describe("F-08 media retention cleanup", () => {
+  it("soft-deletes an unassociated upload older than 24 hours", async () => {
+    const now = new Date();
+    const { asset } = await createUploadIntent();
+
+    await prisma.mediaAsset.update({
+      where: { id: asset.id },
+      data: {
+        createdAt: new Date(now.getTime() - 25 * 60 * 60 * 1000),
+      },
+    });
+
+    const result = await runMediaRetentionCleanup(now);
+
+    const updated = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: asset.id },
+    });
+
+    expect(result.deleted).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(updated.deletedAt).toEqual(now);
+    expect(cloudinaryMock.api.delete_resources).toHaveBeenCalledWith(
+      [asset.storageKey],
+      {
+        resource_type: "image",
+        type: "authenticated",
+        invalidate: true,
+      },
+    );
+  });
+
+  it("keeps the database record active when Cloudinary deletion fails", async () => {
+    const now = new Date();
+    const { asset } = await createUploadIntent();
+
+    await prisma.mediaAsset.update({
+      where: { id: asset.id },
+      data: {
+        createdAt: new Date(now.getTime() - 25 * 60 * 60 * 1000),
+      },
+    });
+
+    cloudinaryMock.api.delete_resources.mockRejectedValueOnce(
+      new Error("Provider unavailable"),
+    );
+
+    const result = await runMediaRetentionCleanup(now);
+
+    const unchanged = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: asset.id },
+    });
+
+    expect(result.failed).toBe(1);
+    expect(unchanged.deletedAt).toBeNull();
+  });
+
+  it("purges media linked only to a draft deleted more than seven days ago", async () => {
+    const now = new Date();
+    const { asset } = await createUploadIntent();
+    const deletedAt = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+
+    const story = await createDraftStory(asset.uploadedById, {
+      deletedAt,
+    });
+
+    await attachAsset(story.id, asset.id);
+
+    await prisma.mediaAsset.update({
+      where: { id: asset.id },
+      data: {
+        createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const result = await runMediaRetentionCleanup(now);
+
+    const updated = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: asset.id },
+    });
+
+    expect(result.deleted).toBe(1);
+    expect(updated.deletedAt).toEqual(now);
+  });
+
+  it("protects media associated with a published story", async () => {
+    const now = new Date();
+    const { asset } = await createUploadIntent();
+
+    const story = await createDraftStory(asset.uploadedById, {
+      deletedAt: null,
+      status: "PUBLISHED",
+      publishedAt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+    });
+
+    await attachAsset(story.id, asset.id);
+
+    await prisma.mediaAsset.update({
+      where: { id: asset.id },
+      data: {
+        createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const result = await runMediaRetentionCleanup(now);
+
+    const unchanged = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: asset.id },
+    });
+
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(unchanged.deletedAt).toBeNull();
+    expect(cloudinaryMock.api.delete_resources).not.toHaveBeenCalled();
+  });
+
+  it("protects shared media if even one linked story is not eligible", async () => {
+    const now = new Date();
+    const { asset } = await createUploadIntent();
+    const oldDeletion = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+
+    const deletedDraft = await createDraftStory(asset.uploadedById, {
+      deletedAt: oldDeletion,
+    });
+
+    const activeDraft = await createDraftStory(asset.uploadedById, {
+      deletedAt: null,
+    });
+
+    await attachAsset(deletedDraft.id, asset.id);
+    await attachAsset(activeDraft.id, asset.id);
+
+    await prisma.mediaAsset.update({
+      where: { id: asset.id },
+      data: {
+        createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const result = await runMediaRetentionCleanup(now);
+
+    const unchanged = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: asset.id },
+    });
+
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(unchanged.deletedAt).toBeNull();
+    expect(cloudinaryMock.api.delete_resources).not.toHaveBeenCalled();
+  });
+});

@@ -79,6 +79,335 @@ afterAll(async () => {
 });
 
 describe("F-08 Cloudinary media lifecycle", () => {
+  async function createProcessingVideoForWebhook() {
+    const { auth, response } = await createIntent("video/mp4", 1024 * 1024);
+    expect(response.statusCode).toBe(201);
+
+    const intent = response.json();
+
+    cloudinaryMock.api.resource.mockResolvedValue({
+      public_id: intent.publicId,
+      resource_type: "video",
+      type: "authenticated",
+      bytes: 1024 * 1024,
+      format: "mp4",
+      duration: 120,
+      width: 1280,
+      height: 720,
+    });
+
+    const completion = await app.inject({
+      method: "POST",
+      url: `/media/${intent.mediaId}/complete`,
+      cookies: auth.cookie,
+      payload: {},
+    });
+
+    expect(completion.statusCode).toBe(200);
+    expect(completion.json().status).toBe("PROCESSING");
+
+    return { mediaId: intent.mediaId, publicId: intent.publicId };
+  }
+
+  async function sendEagerNotification(payload: Record<string, unknown>) {
+    const rawBody = JSON.stringify(payload);
+    const timestamp = String(Math.floor(Date.now() / 1000));
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/media/cloudinary/eager-notification",
+      headers: {
+        "content-type": "application/json",
+        "x-cld-timestamp": timestamp,
+        "x-cld-signature": "test-webhook-signature",
+      },
+      payload: rawBody,
+    });
+
+    return { response, rawBody, timestamp };
+  }
+
+  const successfulEagerResults = [
+    {
+      transformation: "c_limit,w_1280,h_720,vc_h264,q_auto:good,f_mp4",
+      format: "mp4",
+      width: 1280,
+      height: 720,
+      bytes: 700000,
+    },
+    {
+      transformation: "c_limit,w_854,h_480,vc_h264,q_auto:good,f_mp4",
+      format: "mp4",
+      width: 854,
+      height: 480,
+      bytes: 450000,
+    },
+    {
+      transformation: "so_0,c_fill,w_640,h_360,g_auto,f_jpg",
+      format: "jpg",
+      width: 640,
+      height: 360,
+      bytes: 30000,
+    },
+  ];
+
+  it("accepts documented Cloudinary eager callbacks without top-level resource_type or type", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    const { response, rawBody, timestamp } = await sendEagerNotification({
+      notification_type: "eager",
+      public_id: publicId,
+      eager: successfulEagerResults,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      accepted: true,
+      updated: true,
+      status: "READY",
+    });
+
+    expect(
+      cloudinaryMock.utils.verifyNotificationSignature,
+    ).toHaveBeenCalledWith(
+      rawBody,
+      Number(timestamp),
+      "test-webhook-signature",
+      7200,
+    );
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("READY");
+    expect(record?.processedAt).toBeInstanceOf(Date);
+    expect(record?.processingErrorCode).toBeNull();
+    expect(record?.processingMetadata).toMatchObject({
+      provider: "cloudinary",
+      failedTransformationCount: 0,
+      renditions: {
+        video720: { status: "READY", format: "mp4" },
+        video480: { status: "READY", format: "mp4" },
+        thumbnail: { status: "READY", format: "jpg" },
+      },
+    });
+  });
+
+  it("uses the successful 480p rendition when 720p generation fails", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    const eager = [
+      {
+        transformation: "c_limit,w_1280,h_720,vc_h264,q_auto:good,f_mp4",
+        format: "mp4",
+        status: "failed",
+        width: 1280,
+        height: 720,
+      },
+      successfulEagerResults[1],
+      successfulEagerResults[2],
+    ];
+
+    const { response } = await sendEagerNotification({
+      notification_type: "eager",
+      public_id: publicId,
+      eager,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe("READY");
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("READY");
+    expect(record?.processingErrorCode).toBeNull();
+    expect(record?.processingMetadata).toMatchObject({
+      failedTransformationCount: 1,
+      renditions: {
+        video720: { status: "FAILED" },
+        video480: { status: "READY" },
+        thumbnail: { status: "READY" },
+      },
+    });
+  });
+
+  it("marks processing FAILED when both video renditions fail", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    const eager = [
+      {
+        ...successfulEagerResults[0],
+        status: "failed",
+      },
+      {
+        ...successfulEagerResults[1],
+        status: "failed",
+      },
+      successfulEagerResults[2],
+    ];
+
+    const { response } = await sendEagerNotification({
+      notification_type: "eager",
+      public_id: publicId,
+      eager,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe("FAILED");
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("FAILED");
+    expect(record?.processingErrorCode).toBe("VIDEO_RENDITIONS_FAILED");
+  });
+
+  it("marks processing FAILED when thumbnail generation fails", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    const eager = [
+      successfulEagerResults[0],
+      successfulEagerResults[1],
+      {
+        ...successfulEagerResults[2],
+        status: "failed",
+      },
+    ];
+
+    const { response } = await sendEagerNotification({
+      notification_type: "eager",
+      public_id: publicId,
+      eager,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe("FAILED");
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("FAILED");
+    expect(record?.processingErrorCode).toBe("THUMBNAIL_GENERATION_FAILED");
+  });
+
+  it("rejects an invalid webhook signature without changing media state", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    cloudinaryMock.utils.verifyNotificationSignature.mockReturnValue(false);
+
+    const { response } = await sendEagerNotification({
+      notification_type: "eager",
+      public_id: publicId,
+      eager: successfulEagerResults,
+    });
+
+    expect(response.statusCode).toBe(401);
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("PROCESSING");
+    expect(record?.processedAt).toBeNull();
+  });
+
+  it("rejects notifications with missing signature headers", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/media/cloudinary/eager-notification",
+      headers: { "content-type": "application/json" },
+      payload: JSON.stringify({
+        notification_type: "eager",
+        public_id: publicId,
+        eager: successfulEagerResults,
+      }),
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(
+      cloudinaryMock.utils.verifyNotificationSignature,
+    ).not.toHaveBeenCalled();
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("PROCESSING");
+  });
+
+  it("acknowledges duplicate notifications without changing the completed asset", async () => {
+    const { mediaId, publicId } = await createProcessingVideoForWebhook();
+
+    const payload = {
+      notification_type: "eager",
+      public_id: publicId,
+      eager: successfulEagerResults,
+    };
+
+    const first = await sendEagerNotification(payload);
+    expect(first.response.statusCode).toBe(200);
+    expect(first.response.json().status).toBe("READY");
+
+    const beforeDuplicate = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    const second = await sendEagerNotification(payload);
+
+    expect(second.response.statusCode).toBe(200);
+    expect(second.response.json()).toMatchObject({
+      accepted: true,
+      duplicate: true,
+    });
+
+    const afterDuplicate = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(afterDuplicate?.processingStatus).toBe("READY");
+    expect(afterDuplicate?.processedAt?.getTime()).toBe(
+      beforeDuplicate?.processedAt?.getTime(),
+    );
+  });
+
+  it("acknowledges valid notifications for unknown assets without creating records", async () => {
+    const { response } = await sendEagerNotification({
+      notification_type: "eager",
+      public_id: "citeface/story-media/unknown-webhook-asset",
+      eager: successfulEagerResults,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      accepted: true,
+      ignored: true,
+    });
+  });
+
+  it("rejects unexpected notification types", async () => {
+    const { mediaId } = await createProcessingVideoForWebhook();
+
+    const { response } = await sendEagerNotification({
+      notification_type: "upload",
+      public_id: "citeface/story-media/unexpected",
+      eager: successfulEagerResults,
+    });
+
+    expect(response.statusCode).toBe(400);
+
+    const record = await prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
+
+    expect(record?.processingStatus).toBe("PROCESSING");
+  });
   it("creates a signed intent and persists an owner-bound private asset", async () => {
     const { auth, response } = await createIntent();
 

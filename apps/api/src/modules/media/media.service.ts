@@ -459,8 +459,6 @@ export async function processCloudinaryEagerNotification(
 
   if (
     notification.notification_type !== "eager" ||
-    notification.resource_type !== "video" ||
-    notification.type !== "authenticated" ||
     !notification.public_id?.startsWith("citeface/story-media/") ||
     !Array.isArray(notification.eager)
   ) {
@@ -492,13 +490,17 @@ export async function processCloudinaryEagerNotification(
 
   const results = notification.eager;
 
-  const successful = results.filter(
-    (item) => item.status?.toLowerCase() === "success",
-  );
+  // Cloudinary omits status for successful eager transformations.
+  // An explicit non-success status is treated as a failed transformation.
+  const successful = results.filter((item) => {
+    const status = item.status?.toLowerCase();
+    return status === undefined || status === "success";
+  });
 
-  const failed = results.filter(
-    (item) => item.status?.toLowerCase() !== "success",
-  );
+  const failed = results.filter((item) => {
+    const status = item.status?.toLowerCase();
+    return status !== undefined && status !== "success";
+  });
 
   const video720 = successful.find((item) =>
     item.format?.toLowerCase() === "mp4" &&
