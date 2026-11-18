@@ -7,6 +7,7 @@ import {
   type PublicStory,
 } from "../services/stories";
 
+import { PublishedStoryOwnerActions } from "../components/PublishedStoryOwnerActions";
 import "./story-detail.css";
 
 function formatLabel(value: string) {
@@ -123,7 +124,13 @@ function StoryDetail() {
         </Link>
 
         <Link className="detail-back-link" to="/">
-          Discover research
+          Dis
+          {story && (
+            <PublishedStoryOwnerActions
+              story={story}
+              onStoryUpdated={setStory}
+            />
+          )}cover research
         </Link>
       </header>
 

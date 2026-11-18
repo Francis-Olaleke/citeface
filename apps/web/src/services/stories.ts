@@ -495,3 +495,54 @@ export async function getPublicStory(
 
   return data as unknown as { story: PublicStory };
 }
+export interface PublishedStoryUpdatePayload {
+  title?: string;
+  summary?: string;
+  researchQuestion?: string | null;
+  methodology?: string | null;
+  findings?: string | null;
+  significance?: string | null;
+  limitations?: string | null;
+  changeNote?: string;
+}
+
+export async function updatePublishedStory(
+  id: string,
+  payload: PublishedStoryUpdatePayload,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/${id}/published`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const result = (await response.json().catch(() => null)) as
+      | { message?: string }
+      | null;
+
+    throw new StoriesServiceError(
+      result?.message ?? "Unable to update the published story.",
+      response.status,
+    );
+  }
+}
+
+export async function deletePublishedStory(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const result = (await response.json().catch(() => null)) as
+      | { message?: string }
+      | null;
+
+    throw new StoriesServiceError(
+      result?.message ?? "Unable to delete the published story.",
+      response.status,
+    );
+  }
+}
