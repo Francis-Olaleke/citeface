@@ -1,5 +1,6 @@
-﻿import Fastify from "fastify";
+import Fastify from "fastify";
 import cookie from "@fastify/cookie";
+import rawBody from "fastify-raw-body";
 
 import { prisma } from "./plugins/database.js";
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -22,6 +23,12 @@ const app = Fastify({
 });
 
   await app.register(cookie);
+  await app.register(rawBody, {
+    field: "rawBody",
+    global: false,
+    encoding: false,
+    runFirst: true,
+  });
   await app.register(storiesRoutes, { prefix: "/stories" });
   await app.register(researchersRoutes, { prefix: "/researchers" });
   app.register(mediaRoutes, { prefix: "/media" });

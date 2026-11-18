@@ -16,6 +16,7 @@ const cloudinaryMock = vi.hoisted(() => ({
   config: vi.fn(),
   utils: {
     api_sign_request: vi.fn(),
+    verifyNotificationSignature: vi.fn(),
   },
   api: {
     resource: vi.fn(),
@@ -62,10 +63,14 @@ beforeEach(() => {
   process.env.CLOUDINARY_CLOUD_NAME = "citeface-test";
   process.env.CLOUDINARY_API_KEY = "test-api-key";
   process.env.CLOUDINARY_API_SECRET = "test-api-secret";
+  process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL =
+    "https://example.com/api/media/cloudinary/eager-notification";
 
   cloudinaryMock.config.mockClear();
   cloudinaryMock.utils.api_sign_request.mockReset();
   cloudinaryMock.utils.api_sign_request.mockReturnValue("mock-signature");
+  cloudinaryMock.utils.verifyNotificationSignature.mockReset();
+  cloudinaryMock.utils.verifyNotificationSignature.mockReturnValue(true);
   cloudinaryMock.api.resource.mockReset();
 });
 

@@ -14,6 +14,37 @@ const CHUNK_SIZE_BYTES = Number(
 const CHUNK_UPLOAD_THRESHOLD_BYTES = Number(
   process.env.CITEFACE_MEDIA_CHUNK_THRESHOLD_BYTES ?? 100 * 1024 * 1024,
 );
+const VIDEO_EAGER_TRANSFORMATIONS = [
+  "c_limit,w_1280,h_720,vc_h264,q_auto:good,f_mp4",
+  "c_limit,w_854,h_480,vc_h264,q_auto:good,f_mp4",
+  "so_0,c_fill,w_640,h_360,g_auto,f_jpg",
+].join("|");
+
+function getEagerWebhookUrl() {
+  const value = process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL;
+
+  if (!value) {
+    throw new Error("Cloudinary eager webhook URL is not configured.");
+  }
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Cloudinary eager webhook URL is invalid.");
+  }
+
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.hostname === "localhost" ||
+    parsed.hostname === "127.0.0.1"
+  ) {
+    throw new Error("Cloudinary eager webhook URL must be publicly reachable HTTPS.");
+  }
+
+  return parsed.toString();
+}
 const INTENT_TTL_SECONDS = Number(
   process.env.CITEFACE_MEDIA_UPLOAD_INTENT_TTL_SECONDS ?? 600,
 );
@@ -132,10 +163,21 @@ export async function createMediaUploadIntent(
   // Random, non-guessable asset identifier. Never use the user's filename.
   const publicId = `citeface/story-media/${randomUUID()}`;
 
+  const eagerWebhookUrl = media.type === "VIDEO"
+    ? getEagerWebhookUrl()
+    : undefined;
+
   const signatureParams = {
     public_id: publicId,
     timestamp,
     overwrite: false,
+    ...(media.type === "VIDEO"
+      ? {
+          eager: VIDEO_EAGER_TRANSFORMATIONS,
+          eager_async: true,
+          eager_notification_url: eagerWebhookUrl,
+        }
+      : {}),
   };
 
   const signature = cloudinary.utils.api_sign_request(
@@ -181,6 +223,13 @@ export async function createMediaUploadIntent(
     requiresChunking:
       media.type === "VIDEO" &&
       input.sizeBytes > limits.chunkUploadThresholdBytes,
+    ...(media.type === "VIDEO"
+      ? {
+          eager: VIDEO_EAGER_TRANSFORMATIONS,
+          eager_async: true,
+          eager_notification_url: eagerWebhookUrl,
+        }
+      : {}),
     expiresAt: record.uploadExpiresAt,
     // No media delivery URL is exposed by the upload-intent endpoint.
   };
@@ -341,5 +390,191 @@ export async function completeMediaUpload(
     mediaId: record.id,
     status: "PROCESSING" as const,
     message: "Video verified. Video processing is pending.",
+  };
+}
+
+interface CloudinaryEagerResult {
+  transformation?: string;
+  status?: string;
+  format?: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+}
+
+interface CloudinaryEagerNotification {
+  notification_type?: string;
+  public_id?: string;
+  resource_type?: string;
+  type?: string;
+  eager?: CloudinaryEagerResult[];
+}
+
+export async function processCloudinaryEagerNotification(
+  rawBody: Buffer,
+  timestampHeader: string | undefined,
+  signatureHeader: string | undefined,
+) {
+  const config = getCloudinaryConfig();
+
+  if (
+    !timestampHeader ||
+    !signatureHeader ||
+    !/^\d{1,12}$/.test(timestampHeader)
+  ) {
+    throw new MediaUploadError("Invalid Cloudinary notification headers.", 401);
+  }
+
+  const timestamp = Number(timestampHeader);
+  const maxAgeSeconds = Number(
+    process.env.CITEFACE_CLOUDINARY_WEBHOOK_MAX_AGE_SECONDS ?? 7200,
+  );
+
+  if (
+    !Number.isSafeInteger(maxAgeSeconds) ||
+    maxAgeSeconds < 60 ||
+    maxAgeSeconds > 86400
+  ) {
+    throw new Error("Cloudinary webhook timestamp configuration is invalid.");
+  }
+
+  const valid = cloudinary.utils.verifyNotificationSignature(
+    rawBody.toString("utf8"),
+    timestamp,
+    signatureHeader,
+    maxAgeSeconds,
+  );
+
+  if (!valid) {
+    throw new MediaUploadError("Cloudinary notification signature is invalid or expired.", 401);
+  }
+
+  let notification: CloudinaryEagerNotification;
+
+  try {
+    notification = JSON.parse(rawBody.toString("utf8")) as CloudinaryEagerNotification;
+  } catch {
+    throw new MediaUploadError("Cloudinary notification body is invalid.", 400);
+  }
+
+  if (
+    notification.notification_type !== "eager" ||
+    notification.resource_type !== "video" ||
+    notification.type !== "authenticated" ||
+    !notification.public_id?.startsWith("citeface/story-media/") ||
+    !Array.isArray(notification.eager)
+  ) {
+    throw new MediaUploadError("Unexpected Cloudinary notification payload.", 400);
+  }
+
+  const record = await prisma.mediaAsset.findFirst({
+    where: {
+      storageKey: notification.public_id,
+      storageProvider: "cloudinary",
+      type: "VIDEO",
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      processingStatus: true,
+    },
+  });
+
+  // A valid callback for an already removed or unknown asset is acknowledged.
+  if (!record) {
+    return { accepted: true, ignored: true };
+  }
+
+  // Conditional state transition makes repeated callbacks idempotent.
+  if (record.processingStatus !== "PROCESSING") {
+    return { accepted: true, duplicate: true };
+  }
+
+  const results = notification.eager;
+
+  const successful = results.filter(
+    (item) => item.status?.toLowerCase() === "success",
+  );
+
+  const failed = results.filter(
+    (item) => item.status?.toLowerCase() !== "success",
+  );
+
+  const video720 = successful.find((item) =>
+    item.format?.toLowerCase() === "mp4" &&
+    item.transformation?.includes("h_720"),
+  );
+
+  const video480 = successful.find((item) =>
+    item.format?.toLowerCase() === "mp4" &&
+    item.transformation?.includes("h_480"),
+  );
+
+  const thumbnail = successful.find((item) =>
+    item.format?.toLowerCase() === "jpg" &&
+    item.transformation?.includes("f_jpg"),
+  );
+
+  const videoReady = Boolean(video720 || video480);
+  const thumbnailReady = Boolean(thumbnail);
+  const ready = videoReady && thumbnailReady;
+
+  const metadata = {
+    provider: "cloudinary",
+    completedAt: new Date().toISOString(),
+    renditions: {
+      video720: video720
+        ? {
+            status: "READY",
+            width: video720.width ?? null,
+            height: video720.height ?? null,
+            bytes: video720.bytes ?? null,
+            format: video720.format ?? null,
+          }
+        : { status: "FAILED" },
+      video480: video480
+        ? {
+            status: "READY",
+            width: video480.width ?? null,
+            height: video480.height ?? null,
+            bytes: video480.bytes ?? null,
+            format: video480.format ?? null,
+          }
+        : { status: "FAILED" },
+      thumbnail: thumbnail
+        ? {
+            status: "READY",
+            width: thumbnail.width ?? null,
+            height: thumbnail.height ?? null,
+            bytes: thumbnail.bytes ?? null,
+            format: thumbnail.format ?? null,
+          }
+        : { status: "FAILED" },
+    },
+    failedTransformationCount: failed.length,
+  };
+
+  const result = await prisma.mediaAsset.updateMany({
+    where: {
+      id: record.id,
+      processingStatus: "PROCESSING",
+      deletedAt: null,
+    },
+    data: {
+      processingStatus: ready ? "READY" : "FAILED",
+      processingMetadata: metadata,
+      processedAt: new Date(),
+      processingErrorCode: ready
+        ? null
+        : !videoReady
+          ? "VIDEO_RENDITIONS_FAILED"
+          : "THUMBNAIL_GENERATION_FAILED",
+    },
+  });
+
+  return {
+    accepted: true,
+    updated: result.count === 1,
+    status: ready ? "READY" : "FAILED",
   };
 }

@@ -1,9 +1,10 @@
-﻿import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import { getSessionUser } from "../auth/auth.service.js";
 import {
   completeMediaUpload,
   createMediaUploadIntent,
   MediaUploadError,
+  processCloudinaryEagerNotification,
 } from "./media.service.js";
 
 const mediaRoutes: FastifyPluginAsync = async (app) => {
@@ -114,6 +115,46 @@ const mediaRoutes: FastifyPluginAsync = async (app) => {
       }
     },
   );
-};
+
+  app.post(
+    "/cloudinary/eager-notification",
+    {
+      config: { rawBody: true },
+      bodyLimit: 1024 * 1024,
+    },
+    async (request, reply) => {
+      const rawBody = (request as typeof request & {
+        rawBody?: Buffer;
+      }).rawBody;
+
+      if (!Buffer.isBuffer(rawBody)) {
+        return reply.code(400).send({
+          error: "Raw notification body is unavailable.",
+        });
+      }
+
+      try {
+        const timestampHeader = request.headers["x-cld-timestamp"];
+        const signatureHeader = request.headers["x-cld-signature"];
+
+        const result = await processCloudinaryEagerNotification(
+          rawBody,
+          Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader,
+          Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader,
+        );
+
+        return reply.code(200).send(result);
+      } catch (error) {
+        if (error instanceof MediaUploadError) {
+          return reply.code(error.statusCode).send({ error: error.message });
+        }
+
+        request.log.error({ err: error }, "Cloudinary eager notification failed.");
+        return reply.code(503).send({
+          error: "Cloudinary notification processing is temporarily unavailable.",
+        });
+      }
+    },
+  );};
 
 export default mediaRoutes;
