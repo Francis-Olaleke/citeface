@@ -78,6 +78,14 @@ enum MediaType {
   DOCUMENT
 }
 
+enum MediaProcessingStatus {
+  PENDING_UPLOAD
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+}
+
 enum ReactionType {
   APPRECIATE
 }
@@ -420,14 +428,21 @@ model MediaAsset {
   height          Int?
   durationSeconds Int?
   checksum        String?
-  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
-  deletedAt       DateTime? @db.Timestamptz(6)
+
+  processingStatus    MediaProcessingStatus @default(PENDING_UPLOAD)
+  uploadExpiresAt     DateTime?             @db.Timestamptz(6)
+  processingStartedAt DateTime?             @db.Timestamptz(6)
+  processedAt         DateTime?             @db.Timestamptz(6)
+  processingErrorCode String?
+  createdAt           DateTime              @default(now()) @db.Timestamptz(6)
+  deletedAt           DateTime?             @db.Timestamptz(6)
 
   uploadedBy User         @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
   stories    StoryMedia[]
 
   @@index([uploadedById])
   @@index([type])
+  @@index([processingStatus, uploadExpiresAt])
 }
 
 model StoryMedia {
