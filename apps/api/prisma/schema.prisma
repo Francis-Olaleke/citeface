@@ -434,6 +434,7 @@ model MediaAsset {
   processingStartedAt DateTime?             @db.Timestamptz(6)
   processedAt         DateTime?             @db.Timestamptz(6)
   processingErrorCode String?
+  processingMetadata  Json?
   createdAt           DateTime              @default(now()) @db.Timestamptz(6)
   deletedAt           DateTime?             @db.Timestamptz(6)
 

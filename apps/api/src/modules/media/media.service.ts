@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { v2 as cloudinary } from "cloudinary";
 import { prisma } from "../../plugins/database.js";
 
@@ -7,6 +7,12 @@ const IMAGE_LIMIT = Number(
 );
 const VIDEO_LIMIT = Number(
   process.env.CITEFACE_MEDIA_MAX_VIDEO_BYTES ?? 500 * 1024 * 1024,
+);
+const CHUNK_SIZE_BYTES = Number(
+  process.env.CITEFACE_MEDIA_CHUNK_SIZE_BYTES ?? 20 * 1024 * 1024,
+);
+const CHUNK_UPLOAD_THRESHOLD_BYTES = Number(
+  process.env.CITEFACE_MEDIA_CHUNK_THRESHOLD_BYTES ?? 100 * 1024 * 1024,
 );
 const INTENT_TTL_SECONDS = Number(
   process.env.CITEFACE_MEDIA_UPLOAD_INTENT_TTL_SECONDS ?? 600,
@@ -43,7 +49,11 @@ function getLimits() {
     !Number.isSafeInteger(VIDEO_LIMIT) ||
     VIDEO_LIMIT <= 0 ||
     !Number.isSafeInteger(INTENT_TTL_SECONDS) ||
-    INTENT_TTL_SECONDS < 60
+    INTENT_TTL_SECONDS < 60 ||
+    !Number.isSafeInteger(CHUNK_SIZE_BYTES) ||
+    CHUNK_SIZE_BYTES <= 5 * 1024 * 1024 ||
+    !Number.isSafeInteger(CHUNK_UPLOAD_THRESHOLD_BYTES) ||
+    CHUNK_UPLOAD_THRESHOLD_BYTES <= 0
   ) {
     throw new Error("Media upload configuration is invalid.");
   }
@@ -52,6 +62,8 @@ function getLimits() {
     imageLimit: IMAGE_LIMIT,
     videoLimit: VIDEO_LIMIT,
     intentTtlSeconds: INTENT_TTL_SECONDS,
+    chunkSizeBytes: CHUNK_SIZE_BYTES,
+    chunkUploadThresholdBytes: CHUNK_UPLOAD_THRESHOLD_BYTES,
   };
 }
 
@@ -123,7 +135,6 @@ export async function createMediaUploadIntent(
   const signatureParams = {
     public_id: publicId,
     timestamp,
-    type: "authenticated",
     overwrite: false,
   };
 
@@ -151,6 +162,10 @@ export async function createMediaUploadIntent(
     },
   });
 
+  const chunkUploadId = publicId.slice(publicId.lastIndexOf("/") + 1);
+  const uploadUrl =
+    `https://api.cloudinary.com/v1_1/${config.cloudName}/${media.resourceType}/authenticated/upload`;
+
   return {
     mediaId: record.id,
     cloudName: config.cloudName,
@@ -160,8 +175,14 @@ export async function createMediaUploadIntent(
     signature,
     resourceType: media.resourceType,
     uploadType: "authenticated" as const,
+    uploadUrl,
+    chunkUploadId,
+    chunkSizeBytes: limits.chunkSizeBytes,
+    requiresChunking:
+      media.type === "VIDEO" &&
+      input.sizeBytes > limits.chunkUploadThresholdBytes,
     expiresAt: record.uploadExpiresAt,
-    // The client uploads directly to Cloudinary. No delivery URL is returned.
+    // No media delivery URL is exposed by the upload-intent endpoint.
   };
 }
 

@@ -1,4 +1,4 @@
-﻿import {
+import {
   afterAll,
   beforeAll,
   beforeEach,
@@ -86,6 +86,14 @@ describe("F-08 Cloudinary media lifecycle", () => {
     expect(body.signature).toBe("mock-signature");
     expect(body.apiKey).toBe("test-api-key");
     expect(body.uploadType).toBe("authenticated");
+    expect(body.uploadUrl).toBe(
+      "https://api.cloudinary.com/v1_1/citeface-test/image/authenticated/upload",
+    );
+    expect(body.chunkUploadId).toBe(
+      body.publicId.slice(body.publicId.lastIndexOf("/") + 1),
+    );
+    expect(body.chunkSizeBytes).toBe(20 * 1024 * 1024);
+    expect(body.requiresChunking).toBe(false);
     expect(body).not.toHaveProperty("secure_url");
     expect(body).not.toHaveProperty("deliveryUrl");
 
@@ -102,10 +110,47 @@ describe("F-08 Cloudinary media lifecycle", () => {
     expect(record?.uploadExpiresAt).toBeInstanceOf(Date);
 
     expect(cloudinaryMock.utils.api_sign_request).toHaveBeenCalledTimes(1);
+    expect(cloudinaryMock.utils.api_sign_request).toHaveBeenCalledWith(
+      {
+        public_id: body.publicId,
+        timestamp: expect.any(Number),
+        overwrite: false,
+      },
+      "test-api-secret",
+    );
     expect(cloudinaryMock.config).toHaveBeenCalled();
 
     // The session belongs to the same registered user whose intent was created.
     expect(auth.cookie.citeface_session).toBeTruthy();
+  });
+
+  it("issues chunk-upload instructions for videos larger than 100 MiB", async () => {
+    const sizeBytes = 100 * 1024 * 1024 + 1;
+    const { response } = await createIntent("video/mp4", sizeBytes);
+
+    expect(response.statusCode).toBe(201);
+
+    const body = response.json();
+
+    expect(body.resourceType).toBe("video");
+    expect(body.uploadUrl).toBe(
+      "https://api.cloudinary.com/v1_1/citeface-test/video/authenticated/upload",
+    );
+    expect(body.uploadType).toBe("authenticated");
+    expect(body.chunkUploadId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(body.chunkSizeBytes).toBe(20 * 1024 * 1024);
+    expect(body.requiresChunking).toBe(true);
+    expect(body).not.toHaveProperty("deliveryUrl");
+  });
+
+  it("does not require chunking for a video at exactly 100 MiB", async () => {
+    const { response } = await createIntent(
+      "video/mp4",
+      100 * 1024 * 1024,
+    );
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().requiresChunking).toBe(false);
   });
 
   it("verifies an uploaded image and transitions it to READY", async () => {
