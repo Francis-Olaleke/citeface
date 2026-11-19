@@ -299,7 +299,45 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
 
       // Publish the story and save its authors atomically.
       const story = await prisma.$transaction(async (tx) => {
-        const publication = await tx.researchStory.updateMany({
+                // Confirm ownership and draft eligibility before inspecting attachments.
+        const draft = await tx.researchStory.findFirst({
+          where: {
+            id,
+            creatorId: user.id,
+            status: "DRAFT",
+            deletedAt: null,
+            publishedAt: null,
+          },
+          select: { id: true },
+        });
+
+        if (!draft) {
+          return null;
+        }
+
+        // Every attached asset must be active and fully processed.
+        const attachments = await tx.storyMedia.findMany({
+          where: { storyId: id },
+          select: {
+            media: {
+              select: {
+                processingStatus: true,
+                deletedAt: true,
+              },
+            },
+          },
+        });
+
+        const mediaNotReady = attachments.some(
+          ({ media }) =>
+            media.deletedAt !== null ||
+            media.processingStatus !== "READY",
+        );
+
+        if (mediaNotReady) {
+          return { mediaNotReady: true as const };
+        }
+const publication = await tx.researchStory.updateMany({
           where: {
             id,
             creatorId: user.id,
@@ -361,6 +399,13 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
           },
         });
       });
+
+      if (story && "mediaNotReady" in story) {
+        return reply.code(409).send({
+          error: "All attached media must finish processing before publication",
+          code: "STORY_MEDIA_NOT_READY",
+        });
+      }
 
       if (!story) {
         return reply.code(404).send({
