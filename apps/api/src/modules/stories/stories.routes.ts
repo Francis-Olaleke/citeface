@@ -38,6 +38,10 @@ interface CreateStoryBody {
   limitations?: string;
 }
 
+interface AttachStoryMediaBody {
+  mediaAssetId: string;
+  caption?: string;
+}
 interface PublishStoryBody {
   attestation: boolean;
   authors: {
@@ -191,7 +195,218 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
   );
   
   
-    // F-05.4: Publish a research story with explicit author attribution.
+      // Attach an owned, validated media asset to an owned research draft.
+  app.post<{
+    Params: { id: string };
+    Body: AttachStoryMediaBody;
+  }>(
+    "/:id/media",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["mediaAssetId"],
+          additionalProperties: false,
+          properties: {
+            mediaAssetId: { type: "string", format: "uuid" },
+            caption: { type: "string", maxLength: 500 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({
+          error: "Authentication required",
+        });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+
+        return reply.code(401).send({
+          error: "Invalid or expired session",
+        });
+      }
+
+      const { id: storyId } = request.params;
+      const { mediaAssetId, caption } = request.body;
+
+      const result = await prisma.$transaction(async (tx) => {
+        const story = await tx.researchStory.findFirst({
+          where: {
+            id: storyId,
+            creatorId: user.id,
+            status: "DRAFT",
+            deletedAt: null,
+            publishedAt: null,
+          },
+          select: { id: true },
+        });
+
+        if (!story) {
+          return { kind: "STORY_NOT_FOUND" as const };
+        }
+
+        const media = await tx.mediaAsset.findFirst({
+          where: {
+            id: mediaAssetId,
+            uploadedById: user.id,
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            type: true,
+            mimeType: true,
+            width: true,
+            height: true,
+            durationSeconds: true,
+            processingStatus: true,
+          },
+        });
+
+        if (!media) {
+          return { kind: "MEDIA_NOT_FOUND" as const };
+        }
+
+        if (
+          media.processingStatus !== "PROCESSING" &&
+          media.processingStatus !== "READY"
+        ) {
+          return { kind: "MEDIA_NOT_ATTACHABLE" as const };
+        }
+
+        if (media.type !== "IMAGE" && media.type !== "VIDEO") {
+          return { kind: "UNSUPPORTED_MEDIA" as const };
+        }
+
+        const existing = await tx.storyMedia.findMany({
+          where: { storyId },
+          select: {
+            mediaAssetId: true,
+            sortOrder: true,
+            media: {
+              select: { type: true },
+            },
+          },
+        });
+
+        if (existing.some((item) => item.mediaAssetId === media.id)) {
+          return { kind: "MEDIA_ALREADY_ATTACHED" as const };
+        }
+
+        if (media.type === "IMAGE") {
+          if (existing.some((item) => item.media.type === "VIDEO")) {
+            return { kind: "INCOMPATIBLE_MEDIA" as const };
+          }
+
+          const imageCount = existing.filter(
+            (item) => item.media.type === "IMAGE",
+          ).length;
+
+          if (imageCount >= 10) {
+            return { kind: "IMAGE_LIMIT_REACHED" as const };
+          }
+        }
+
+        if (media.type === "VIDEO" && existing.length > 0) {
+          return { kind: "INCOMPATIBLE_MEDIA" as const };
+        }
+
+        const nextSortOrder =
+          existing.length === 0
+            ? 0
+            : Math.max(...existing.map((item) => item.sortOrder)) + 1;
+
+        const attachment = await tx.storyMedia.create({
+          data: {
+            storyId,
+            mediaAssetId: media.id,
+            sortOrder: nextSortOrder,
+            caption: caption?.trim() || null,
+          },
+          select: {
+            id: true,
+            sortOrder: true,
+            caption: true,
+            createdAt: true,
+            media: {
+              select: {
+                id: true,
+                type: true,
+                mimeType: true,
+                width: true,
+                height: true,
+                durationSeconds: true,
+                processingStatus: true,
+              },
+            },
+          },
+        });
+
+        return { kind: "ATTACHED" as const, attachment };
+      });
+
+      switch (result.kind) {
+        case "STORY_NOT_FOUND":
+          return reply.code(404).send({
+            error: "Research draft not found",
+          });
+
+        case "MEDIA_NOT_FOUND":
+          return reply.code(404).send({
+            error: "Media asset not found",
+          });
+
+        case "MEDIA_NOT_ATTACHABLE":
+          return reply.code(409).send({
+            error: "Media must be processing or ready before attachment",
+            code: "MEDIA_NOT_ATTACHABLE",
+          });
+
+        case "UNSUPPORTED_MEDIA":
+          return reply.code(400).send({
+            error: "Only image and video media can be attached to a story",
+            code: "UNSUPPORTED_STORY_MEDIA",
+          });
+
+        case "MEDIA_ALREADY_ATTACHED":
+          return reply.code(409).send({
+            error: "This media is already attached to the story",
+            code: "STORY_MEDIA_ALREADY_ATTACHED",
+          });
+
+        case "INCOMPATIBLE_MEDIA":
+          return reply.code(409).send({
+            error: "A story can contain either images or one video, not both",
+            code: "INCOMPATIBLE_STORY_MEDIA",
+          });
+
+        case "IMAGE_LIMIT_REACHED":
+          return reply.code(409).send({
+            error: "A story can contain a maximum of 10 images",
+            code: "STORY_IMAGE_LIMIT",
+          });
+
+        case "ATTACHED":
+          return reply.code(201).send({
+            attachment: result.attachment,
+          });
+      }
+    },
+  );
+// F-05.4: Publish a research story with explicit author attribution.
   app.post<{ Params: { id: string }; Body: PublishStoryBody }>(
     "/:id/publish",
     {
@@ -299,7 +514,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
 
       // Publish the story and save its authors atomically.
       const story = await prisma.$transaction(async (tx) => {
-                // Confirm ownership and draft eligibility before inspecting attachments.
+        // Confirm ownership and draft eligibility before inspecting attachments.
         const draft = await tx.researchStory.findFirst({
           where: {
             id,
@@ -337,7 +552,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
         if (mediaNotReady) {
           return { mediaNotReady: true as const };
         }
-const publication = await tx.researchStory.updateMany({
+        const publication = await tx.researchStory.updateMany({
           where: {
             id,
             creatorId: user.id,

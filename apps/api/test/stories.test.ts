@@ -1027,6 +1027,359 @@ describe("F-05.4 research story publishing", () => {
     });
   }
 
+  async function attachMedia(
+    storyId: string,
+    processingStatus: "PROCESSING" | "FAILED" | "READY",
+    type: "IMAGE" | "VIDEO" = "IMAGE",
+  ) {
+    const story = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+      select: { creatorId: true },
+    });
+
+    const media = await prisma.mediaAsset.create({
+      data: {
+        uploadedById: story.creatorId,
+        type,
+        storageKey: "publish-readiness/" + storyId + "-" + processingStatus + "-" + type,
+        storageProvider: "cloudinary",
+        originalName: type === "VIDEO" ? "research-video.mp4" : "research-image.png",
+        mimeType: type === "VIDEO" ? "video/mp4" : "image/png",
+        sizeBytes: 1024n,
+        processingStatus,
+      },
+    });
+
+    await prisma.storyMedia.create({
+      data: {
+        storyId,
+        mediaAssetId: media.id,
+        sortOrder: 0,
+      },
+    });
+  }
+
+  async function createAttachableMedia(
+    storyId: string,
+    type: "IMAGE" | "VIDEO" | "DOCUMENT" = "IMAGE",
+    processingStatus: "PROCESSING" | "READY" | "FAILED" | "UPLOADING" = "READY",
+  ) {
+    const story = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+      select: { creatorId: true },
+    });
+
+    return prisma.mediaAsset.create({
+      data: {
+        uploadedById: story.creatorId,
+        type,
+        storageKey:
+          "story-attachment/" +
+          story.creatorId +
+          "/" +
+          Date.now() +
+          "-" +
+          Math.random(),
+        storageProvider: "cloudinary",
+        originalName: type === "VIDEO" ? "research-video.mp4" : "research-image.png",
+        mimeType: type === "VIDEO" ? "video/mp4" : "image/png",
+        sizeBytes: 1024n,
+        processingStatus,
+      },
+    });
+  }
+
+  it("attaches an owned ready image to a draft", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: {
+        mediaAssetId: media.id,
+        caption: "Graphical abstract",
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().attachment).toMatchObject({
+      sortOrder: 0,
+      caption: "Graphical abstract",
+      media: {
+        id: media.id,
+        type: "IMAGE",
+        processingStatus: "READY",
+      },
+    });
+    expect(res.json().attachment.media).not.toHaveProperty("storageKey");
+    expect(
+      await prisma.storyMedia.count({ where: { storyId } }),
+    ).toBe(1);
+  });
+
+  it("allows an owned image to be attached while processing", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId, "IMAGE", "PROCESSING");
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: media.id },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().attachment.media.processingStatus).toBe("PROCESSING");
+  });
+
+  it("requires authentication to attach story media", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/00000000-0000-4000-8000-000000000001/media",
+      payload: {
+        mediaAssetId: "00000000-0000-4000-8000-000000000002",
+      },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects failed media assets", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId, "IMAGE", "FAILED");
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: media.id },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe("MEDIA_NOT_ATTACHABLE");
+    expect(await prisma.storyMedia.count({ where: { storyId } })).toBe(0);
+  });
+
+  it("rejects media uploaded by another researcher", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const { cookie: otherCookie } = await registerAndLogin(app, 2);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const otherDraft = await createDraft(otherCookie);
+    const otherStoryId = otherDraft.json().story.id;
+    const media = await createAttachableMedia(otherStoryId);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: media.id },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(await prisma.storyMedia.count({ where: { storyId } })).toBe(0);
+  });
+
+  it("rejects duplicate media attachments", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId);
+
+    const payload = { mediaAssetId: media.id };
+    const first = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload,
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload,
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(409);
+    expect(second.json().code).toBe("STORY_MEDIA_ALREADY_ATTACHED");
+    expect(await prisma.storyMedia.count({ where: { storyId } })).toBe(1);
+  });
+
+  it("assigns sequential sort orders to attached images", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const firstMedia = await createAttachableMedia(storyId);
+    const secondMedia = await createAttachableMedia(storyId);
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: firstMedia.id },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: secondMedia.id },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(201);
+    expect(first.json().attachment.sortOrder).toBe(0);
+    expect(second.json().attachment.sortOrder).toBe(1);
+  });
+
+  it("prevents mixing a video with image slides", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const image = await createAttachableMedia(storyId, "IMAGE");
+    const video = await createAttachableMedia(storyId, "VIDEO");
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: image.id },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: video.id },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(409);
+    expect(second.json().code).toBe("INCOMPATIBLE_STORY_MEDIA");
+  });
+
+  it("rejects a video when the draft already contains a video", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const firstVideo = await createAttachableMedia(storyId, "VIDEO");
+    const secondVideo = await createAttachableMedia(storyId, "VIDEO");
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: firstVideo.id },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: secondVideo.id },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(409);
+    expect(second.json().code).toBe("INCOMPATIBLE_STORY_MEDIA");
+  });
+
+  it("rejects the eleventh image on a draft", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    for (let index = 0; index < 10; index += 1) {
+      const media = await createAttachableMedia(storyId);
+      const res = await app.inject({
+        method: "POST",
+        url: "/stories/" + storyId + "/media",
+        cookies: cookie,
+        payload: { mediaAssetId: media.id },
+      });
+      expect(res.statusCode).toBe(201);
+    }
+
+    const eleventhMedia = await createAttachableMedia(storyId);
+    const eleventh = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/media",
+      cookies: cookie,
+      payload: { mediaAssetId: eleventhMedia.id },
+    });
+
+    expect(eleventh.statusCode).toBe(409);
+    expect(eleventh.json().code).toBe("STORY_IMAGE_LIMIT");
+    expect(await prisma.storyMedia.count({ where: { storyId } })).toBe(10);
+  });
+  async function expectPublicationBlockedByMedia(
+    processingStatus: "PROCESSING" | "FAILED",
+  ) {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    await attachMedia(storyId, processingStatus);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/publish",
+      cookies: cookie,
+      payload: validPublication,
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({
+      code: "STORY_MEDIA_NOT_READY",
+    });
+
+    const stored = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: storyId },
+    });
+
+    expect(stored.status).toBe("DRAFT");
+    expect(stored.publishedAt).toBeNull();
+
+    expect(
+      await prisma.storyAuthor.count({
+        where: { storyId },
+      }),
+    ).toBe(0);
+  }
+  it("blocks publication while attached media is processing", async () => {
+    await expectPublicationBlockedByMedia("PROCESSING");
+  });
+
+  it("blocks publication when attached media has failed processing", async () => {
+    await expectPublicationBlockedByMedia("FAILED");
+  });
+
+  it("publishes a draft when all attached media is ready", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    await attachMedia(storyId, "READY", "IMAGE");
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/stories/" + storyId + "/publish",
+      cookies: cookie,
+      payload: validPublication,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().story).toMatchObject({
+      id: storyId,
+      status: "PUBLISHED",
+    });
+  });
   it("rejects publishing without authentication", async () => {
     const res = await app.inject({
       method: "POST",
