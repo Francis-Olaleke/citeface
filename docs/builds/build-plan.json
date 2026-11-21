@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "builds": [
+    { "id": "build-1", "title": "Repository and product baseline", "milestone": "M0", "dependsOn": [], "userStories": ["FOUNDATION-001"] },
+    { "id": "build-2", "title": "User journeys and information architecture", "milestone": "M0", "dependsOn": ["build-1"], "userStories": ["UX-001"] },
+    { "id": "build-3", "title": "UI system and application shell", "milestone": "M0", "dependsOn": ["build-2"], "userStories": ["UX-002"] },
+    { "id": "build-4", "title": "Authentication and onboarding", "milestone": "M1", "dependsOn": ["build-3"], "userStories": ["AUTH-001", "AUTH-002"] },
+    { "id": "build-5", "title": "Researcher profiles", "milestone": "M1", "dependsOn": ["build-4"], "userStories": ["PROFILE-001", "PROFILE-002"] },
+    { "id": "build-6", "title": "Research interests and topic onboarding", "milestone": "M1", "dependsOn": ["build-5"], "userStories": ["PROFILE-003", "DISC-001"] },
+    { "id": "build-7", "title": "Publishing domain and composer", "milestone": "M2", "dependsOn": ["build-3", "build-5"], "userStories": ["PUB-001", "PUB-002", "PUB-005", "PUB-006"] },
+    { "id": "build-8", "title": "Private drafts", "milestone": "M2", "dependsOn": ["build-7"], "userStories": ["PUB-007", "PUB-008", "PUB-009", "PUB-010"] },
+    { "id": "build-9", "title": "Image/video upload and playback", "milestone": "M2", "dependsOn": ["build-8"], "userStories": ["PUB-003", "PUB-004", "PUB-017", "PUB-018"] },
+    { "id": "build-10", "title": "Sources, authorship, and rights", "milestone": "M2", "dependsOn": ["build-7", "build-8"], "userStories": ["PUB-014", "PUB-015", "PUB-016"] },
+    { "id": "build-11", "title": "Publication and audience authorization", "milestone": "M2", "dependsOn": ["build-8", "build-9", "build-10"], "userStories": ["PUB-011", "PUB-012", "PUB-019", "PUB-020", "PUB-021", "PUB-022"] },
+    { "id": "build-12", "title": "Discovery feed", "milestone": "M3", "dependsOn": ["build-3", "build-11"], "userStories": ["DISC-002"] },
+    { "id": "build-13", "title": "Story detail experience", "milestone": "M3", "dependsOn": ["build-11", "build-12"], "userStories": ["DISC-003", "PUB-013"] },
+    { "id": "build-14", "title": "Search and discovery filters", "milestone": "M3", "dependsOn": ["build-12", "build-13"], "userStories": ["DISC-004"] },
+    { "id": "build-15", "title": "Researcher/topic network", "milestone": "M3", "dependsOn": ["build-5", "build-6", "build-11"], "userStories": ["NET-001", "NET-002"] },
+    { "id": "build-16", "title": "Reactions, saves, and discussions", "milestone": "M3", "dependsOn": ["build-11", "build-13", "build-15"], "userStories": ["ENG-001", "ENG-002", "ENG-003", "PUB-030", "PUB-031"] },
+    { "id": "build-17", "title": "Notifications and activity", "milestone": "M3", "dependsOn": ["build-15", "build-16"], "userStories": ["NOTIF-001"] },
+    { "id": "build-18", "title": "Trust, safety, and research integrity", "milestone": "M4", "dependsOn": ["build-11", "build-16", "build-17"], "userStories": ["TRUST-001", "TRUST-002"] },
+    { "id": "build-19", "title": "Product-wide quality and observability", "milestone": "M4", "dependsOn": ["build-14", "build-17", "build-18"], "userStories": ["OPS-001"] },
+    { "id": "build-20", "title": "Beta, deployment, and launch gate", "milestone": "M4", "dependsOn": ["build-19"], "userStories": ["OPS-002"] }
+  ]
+}

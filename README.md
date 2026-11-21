@@ -54,8 +54,12 @@ Project requirements and architectural decisions are maintained in the `docs/` d
 
 - `docs/product/` - Product direction and publishing requirements.
 - `docs/architecture/` - Technical architecture and data model.
+- `docs/user-stories/` - Cross-domain user story catalog and build mapping.
+- `docs/design/` - UI/UX implementation direction.
 - `docs/decisions/` - Recorded architectural and product decisions.
-- `docs/builds/` - Build scopes and completion checklists.
+- `docs/builds/` - Build 0 reference, 20-build execution plan, and milestones.
+
+Validate the build-plan files with `node scripts/validate-build-plan.mjs`.
 
 ## Getting Started
 
