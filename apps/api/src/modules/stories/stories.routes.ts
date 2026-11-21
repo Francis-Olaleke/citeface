@@ -195,6 +195,113 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
   );
   
   
+      // Return attachments belonging to the authenticated researcher's draft.
+  app.get<{
+    Params: { id: string };
+  }>(
+    "/:id/media",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({
+          error: "Authentication required",
+        });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({
+          error: "Your session is invalid or has expired",
+        });
+      }
+
+      const draft = await prisma.researchStory.findFirst({
+        where: {
+          id: request.params.id,
+          creatorId: user.id,
+          status: "DRAFT",
+          deletedAt: null,
+          publishedAt: null,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!draft) {
+        return reply.code(404).send({
+          error: "Research draft not found",
+        });
+      }
+
+      const attachments = await prisma.storyMedia.findMany({
+        where: {
+          storyId: draft.id,
+          media: {
+            deletedAt: null,
+          },
+        },
+        orderBy: {
+          sortOrder: "asc",
+        },
+        select: {
+          id: true,
+          sortOrder: true,
+          caption: true,
+          createdAt: true,
+          media: {
+            select: {
+              id: true,
+              type: true,
+              mimeType: true,
+              width: true,
+              height: true,
+              durationSeconds: true,
+              processingStatus: true,
+              processingErrorCode: true,
+              createdAt: true,
+              processedAt: true,
+            },
+          },
+        },
+      });
+
+      return reply.send({
+        attachments: attachments.map((attachment) => ({
+          id: attachment.id,
+          sortOrder: attachment.sortOrder,
+          caption: attachment.caption,
+          createdAt: attachment.createdAt,
+          media: {
+            id: attachment.media.id,
+            type: attachment.media.type,
+            mimeType: attachment.media.mimeType,
+            width: attachment.media.width,
+            height: attachment.media.height,
+            durationSeconds: attachment.media.durationSeconds,
+            status: attachment.media.processingStatus,
+            errorCode: attachment.media.processingErrorCode,
+            createdAt: attachment.media.createdAt,
+            processedAt: attachment.media.processedAt,
+          },
+        })),
+      });
+    },
+  );
       // Attach an owned, validated media asset to an owned research draft.
   app.post<{
     Params: { id: string };

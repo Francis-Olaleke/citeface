@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { getSessionUser } from "../auth/auth.service.js";
 import {
   completeMediaUpload,
+  getMediaUploadStatus,
   createMediaUploadIntent,
   MediaUploadError,
   processCloudinaryEagerNotification,
@@ -116,6 +117,53 @@ const mediaRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  app.get<{
+    Params: { mediaId: string };
+  }>(
+    "/:mediaId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["mediaId"],
+          properties: {
+            mediaId: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({ error: "You are not authenticated." });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({
+          error: "Your session is invalid or has expired.",
+        });
+      }
+
+      try {
+        return reply.send(
+          await getMediaUploadStatus(user.id, request.params.mediaId),
+        );
+      } catch (error) {
+        if (error instanceof MediaUploadError) {
+          return reply.code(error.statusCode).send({ error: error.message });
+        }
+
+        request.log.error({ err: error }, "Media status lookup failed.");
+        return reply.code(503).send({
+          error: "Media status is temporarily unavailable.",
+        });
+      }
+    },
+  );
   app.post(
     "/cloudinary/eager-notification",
     {

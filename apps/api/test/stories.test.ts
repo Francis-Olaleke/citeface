@@ -1089,6 +1089,123 @@ describe("F-05.4 research story publishing", () => {
     });
   }
 
+  it("requires authentication to read draft media", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/stories/00000000-0000-4000-8000-000000000001/media",
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns ordered draft media without exposing storage details", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+
+    const firstMedia = await createAttachableMedia(storyId);
+    const secondMedia = await createAttachableMedia(storyId);
+
+    await prisma.storyMedia.create({
+      data: {
+        storyId,
+        mediaAssetId: secondMedia.id,
+        sortOrder: 1,
+        caption: "Second slide",
+      },
+    });
+
+    await prisma.storyMedia.create({
+      data: {
+        storyId,
+        mediaAssetId: firstMedia.id,
+        sortOrder: 0,
+        caption: "First slide",
+      },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/stories/${storyId}/media`,
+      cookies: cookie,
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const body = res.json();
+
+    expect(body.attachments).toHaveLength(2);
+    expect(body.attachments[0]).toMatchObject({
+      sortOrder: 0,
+      caption: "First slide",
+      media: {
+        id: firstMedia.id,
+        type: "IMAGE",
+        status: "READY",
+      },
+    });
+    expect(body.attachments[1]).toMatchObject({
+      sortOrder: 1,
+      caption: "Second slide",
+      media: {
+        id: secondMedia.id,
+        type: "IMAGE",
+        status: "READY",
+      },
+    });
+
+    const responseText = JSON.stringify(body);
+    expect(responseText).not.toContain(firstMedia.storageKey);
+    expect(responseText).not.toContain(secondMedia.storageKey);
+    expect(responseText).not.toContain("storageProvider");
+    expect(responseText).not.toContain("cloudinary");
+  });
+
+  it("does not expose another researcher's draft media", async () => {
+    const owner = await registerAndLogin(app, 1);
+    const other = await registerAndLogin(app, 2);
+    const draft = await createDraft(owner.cookie);
+    const storyId = draft.json().story.id;
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/stories/${storyId}/media`,
+      cookies: other.cookie,
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error).toBe("Research draft not found");
+  });
+
+  it("excludes deleted media from draft attachments", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId);
+
+    await prisma.storyMedia.create({
+      data: {
+        storyId,
+        mediaAssetId: media.id,
+        sortOrder: 0,
+        caption: "Deleted asset",
+      },
+    });
+
+    await prisma.mediaAsset.update({
+      where: { id: media.id },
+      data: { deletedAt: new Date() },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/stories/${storyId}/media`,
+      cookies: cookie,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().attachments).toEqual([]);
+  });
   it("attaches an owned ready image to a draft", async () => {
     const { cookie } = await registerAndLogin(app);
     const draft = await createDraft(cookie);

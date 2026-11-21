@@ -235,6 +235,49 @@ export async function createMediaUploadIntent(
   };
 }
 
+export async function getMediaUploadStatus(
+  userId: string,
+  mediaId: string,
+) {
+  const record = await prisma.mediaAsset.findFirst({
+    where: {
+      id: mediaId,
+      uploadedById: userId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      type: true,
+      mimeType: true,
+      width: true,
+      height: true,
+      durationSeconds: true,
+      processingStatus: true,
+      processingErrorCode: true,
+      createdAt: true,
+      processedAt: true,
+    },
+  });
+
+  if (!record) {
+    throw new MediaUploadError("Media asset was not found.", 404);
+  }
+
+  return {
+    media: {
+      id: record.id,
+      type: record.type,
+      mimeType: record.mimeType,
+      width: record.width,
+      height: record.height,
+      durationSeconds: record.durationSeconds,
+      status: record.processingStatus,
+      errorCode: record.processingErrorCode,
+      createdAt: record.createdAt,
+      processedAt: record.processedAt,
+    },
+  };
+}
 interface CloudinaryAsset {
   public_id?: string;
   resource_type?: string;

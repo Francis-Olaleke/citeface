@@ -1,3 +1,4 @@
+import DraftMediaManager from "./DraftMediaManager";
 import PublishStoryForm from "./PublishStoryForm";
 import { useNotification } from "../context/NotificationContext";
 import { useEffect, useState } from "react";
@@ -310,7 +311,9 @@ function ResearchDraftEditor({
           </button>
         </div>
       </form>
-            <PublishStoryForm
+      <DraftMediaManager draftId={draft.id} />
+
+      <PublishStoryForm
         draftId={draft.id}
         onPublished={onPublished}
       />

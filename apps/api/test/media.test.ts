@@ -408,6 +408,58 @@ describe("F-08 Cloudinary media lifecycle", () => {
 
     expect(record?.processingStatus).toBe("PROCESSING");
   });
+  it("GET /media/:mediaId requires authentication", async () => {
+    const { response } = await createIntent();
+
+    const intent = response.json();
+
+    const status = await app.inject({
+      method: "GET",
+      url: `/media/${intent.mediaId}`,
+    });
+
+    expect(status.statusCode).toBe(401);
+  });
+
+  it("GET /media/:mediaId returns owner-authorized processing status", async () => {
+    const { auth, response } = await createIntent();
+
+    const intent = response.json();
+
+    const status = await app.inject({
+      method: "GET",
+      url: `/media/${intent.mediaId}`,
+      cookies: auth.cookie,
+    });
+
+    expect(status.statusCode).toBe(200);
+    expect(status.json()).toMatchObject({
+      media: {
+        id: intent.mediaId,
+        type: "IMAGE",
+        mimeType: "image/png",
+        status: "UPLOADING",
+      },
+    });
+
+    expect(status.json().media).not.toHaveProperty("storageKey");
+    expect(status.json().media).not.toHaveProperty("storageProvider");
+  });
+
+  it("GET /media/:mediaId prevents another researcher from accessing media status", async () => {
+    const { response } = await createIntent();
+
+    const intent = response.json();
+    const otherUser = await registerAndLogin(app, nextUserNumber());
+
+    const status = await app.inject({
+      method: "GET",
+      url: `/media/${intent.mediaId}`,
+      cookies: otherUser.cookie,
+    });
+
+    expect(status.statusCode).toBe(404);
+  });
   it("creates a signed intent and persists an owner-bound private asset", async () => {
     const { auth, response } = await createIntent();
 
