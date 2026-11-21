@@ -261,6 +261,25 @@ function StoryDetail() {
                     <div className="detail-media-item" key={item.id}>
                       <strong>{formatLabel(item.media.type)}</strong>
 
+                      {item.media.deliveryUrl &&
+                        (item.media.type === "VIDEO" ? (
+                          <video
+                            className="detail-media-preview"
+                            src={item.media.deliveryUrl}
+                            controls
+                            preload="metadata"
+                            aria-label={item.caption || "Research video"}
+                          />
+                        ) : (
+                          <img
+                            className="detail-media-preview"
+                            src={item.media.deliveryUrl}
+                            alt={item.caption || "Research image"}
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                          />
+                        ))}
+
                       {item.caption && <p>{item.caption}</p>}
 
                       <small>

@@ -576,6 +576,22 @@ input:disabled {
   margin-top: 14px;
 }
 
+.story-card-media {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.story-card-media img,
+.story-card-media video {
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  border-radius: 10px;
+  background: #101828;
+  object-fit: contain;
+}
+
 .story-topic {
   padding: 6px 10px;
   border: 1px solid #e5eaf2;

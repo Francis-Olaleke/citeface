@@ -104,6 +104,71 @@ beforeEach(async () => {
 });
 
 describe("F-04 discovery feed", () => {
+  it("provides signed delivery URLs for ready story media without exposing storage fields", async () => {
+    const user = await createUser();
+    const story = await createStory(user.id, {
+      title: "Image Delivery Test",
+      slug: "image-delivery-test",
+    });
+    const media = await prisma.mediaAsset.create({
+      data: {
+        uploadedById: user.id,
+        type: "IMAGE",
+        storageKey: "citeface/story-media/test-image",
+        storageProvider: "cloudinary",
+        originalName: "graph.png",
+        mimeType: "image/png",
+        sizeBytes: 12345n,
+        processingStatus: "READY",
+        width: 640,
+        height: 480,
+      },
+    });
+
+    await prisma.storyMedia.create({
+      data: {
+        storyId: story.id,
+        mediaAssetId: media.id,
+        sortOrder: 0,
+        caption: "Research graph",
+      },
+    });
+
+    const oldCloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const oldApiKey = process.env.CLOUDINARY_API_KEY;
+    const oldApiSecret = process.env.CLOUDINARY_API_SECRET;
+    process.env.CLOUDINARY_CLOUD_NAME = "citeface-test";
+    process.env.CLOUDINARY_API_KEY = "test-api-key";
+    process.env.CLOUDINARY_API_SECRET = "test-api-secret";
+
+    try {
+      const response = await app.inject({
+        method: "GET",
+        url: "/stories/feed",
+      });
+
+      expect(response.statusCode).toBe(200);
+      const feedStory = response.json().stories.find(
+        (item: { id: string }) => item.id === story.id,
+      );
+
+      expect(feedStory.media[0].media.deliveryUrl).toContain(
+        "/image/authenticated/",
+      );
+      expect(feedStory.media[0].media.deliveryUrl).toContain(
+        "citeface-test",
+      );
+      expect(feedStory.media[0].media).not.toHaveProperty("storageKey");
+      expect(feedStory.media[0].media).not.toHaveProperty("processingStatus");
+    } finally {
+      if (oldCloudName === undefined) delete process.env.CLOUDINARY_CLOUD_NAME;
+      else process.env.CLOUDINARY_CLOUD_NAME = oldCloudName;
+      if (oldApiKey === undefined) delete process.env.CLOUDINARY_API_KEY;
+      else process.env.CLOUDINARY_API_KEY = oldApiKey;
+      if (oldApiSecret === undefined) delete process.env.CLOUDINARY_API_SECRET;
+      else process.env.CLOUDINARY_API_SECRET = oldApiSecret;
+    }
+  });
   it("returns published research stories with creator information", async () => {
     const user = await createUser();
 

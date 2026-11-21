@@ -43,7 +43,10 @@ export interface FeedStory {
       id: string;
       type: string;
       mimeType: string;
+      width: number | null;
+      height: number | null;
       durationSeconds: number | null;
+      deliveryUrl: string | null;
     };
   }[];
 
@@ -437,6 +440,7 @@ export interface PublicStory {
       height: number | null;
       durationSeconds: number | null;
       createdAt: string;
+      deliveryUrl: string | null;
     };
   }[];
 

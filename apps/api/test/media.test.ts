@@ -473,7 +473,7 @@ describe("F-08 Cloudinary media lifecycle", () => {
     expect(body.apiKey).toBe("test-api-key");
     expect(body.uploadType).toBe("authenticated");
     expect(body.uploadUrl).toBe(
-      "https://api.cloudinary.com/v1_1/citeface-test/image/authenticated/upload",
+      "https://api.cloudinary.com/v1_1/citeface-test/image/upload",
     );
     expect(body.chunkUploadId).toBe(
       body.publicId.slice(body.publicId.lastIndexOf("/") + 1),
@@ -501,6 +501,7 @@ describe("F-08 Cloudinary media lifecycle", () => {
         public_id: body.publicId,
         timestamp: expect.any(Number),
         overwrite: false,
+        type: "authenticated",
       },
       "test-api-secret",
     );
@@ -520,7 +521,7 @@ describe("F-08 Cloudinary media lifecycle", () => {
 
     expect(body.resourceType).toBe("video");
     expect(body.uploadUrl).toBe(
-      "https://api.cloudinary.com/v1_1/citeface-test/video/authenticated/upload",
+      "https://api.cloudinary.com/v1_1/citeface-test/video/upload",
     );
     expect(body.uploadType).toBe("authenticated");
     expect(body.chunkUploadId).toMatch(/^[0-9a-f-]{36}$/i);

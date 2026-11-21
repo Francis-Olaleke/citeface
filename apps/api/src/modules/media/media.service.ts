@@ -171,6 +171,7 @@ export async function createMediaUploadIntent(
     public_id: publicId,
     timestamp,
     overwrite: false,
+    type: "authenticated",
     ...(media.type === "VIDEO"
       ? {
           eager: VIDEO_EAGER_TRANSFORMATIONS,
@@ -206,7 +207,7 @@ export async function createMediaUploadIntent(
 
   const chunkUploadId = publicId.slice(publicId.lastIndexOf("/") + 1);
   const uploadUrl =
-    `https://api.cloudinary.com/v1_1/${config.cloudName}/${media.resourceType}/authenticated/upload`;
+    `https://api.cloudinary.com/v1_1/${config.cloudName}/${media.resourceType}/upload`;
 
   return {
     mediaId: record.id,
@@ -233,6 +234,23 @@ export async function createMediaUploadIntent(
     expiresAt: record.uploadExpiresAt,
     // No media delivery URL is exposed by the upload-intent endpoint.
   };
+}
+
+export function getMediaDeliveryUrl(
+  storageKey: string,
+  type: "IMAGE" | "VIDEO",
+  mimeType: string,
+) {
+  const config = getCloudinaryConfig();
+  const format = type === "VIDEO" ? "mp4" : mimeType.split("/")[1];
+
+  return cloudinary.url(storageKey, {
+    resource_type: type === "VIDEO" ? "video" : "image",
+    type: "authenticated",
+    sign_url: true,
+    secure: true,
+    format,
+  });
 }
 
 export async function getMediaUploadStatus(

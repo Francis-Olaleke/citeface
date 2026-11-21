@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../../plugins/database.js";
 import { getSessionUser } from "../auth/auth.service.js";
+import { getMediaDeliveryUrl } from "../media/media.service.js";
 
 type ResearchClassification =
   | "PEER_REVIEWED_ARTICLE"
@@ -1385,6 +1386,8 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
         width: true,
         height: true,
         durationSeconds: true,
+      storageKey: true,
+      processingStatus: true,
         createdAt: true,
       },
     },
@@ -1416,7 +1419,32 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
     ]);
 
     return reply.send({
-      stories,
+      stories: stories.map((story) => ({
+        ...story,
+        media: story.media.map((attachment) => {
+          const {
+            storageKey,
+            processingStatus,
+            ...media
+          } = attachment.media;
+
+          return {
+            ...attachment,
+            media: {
+              ...media,
+              deliveryUrl:
+                processingStatus === "READY" &&
+                (media.type === "IMAGE" || media.type === "VIDEO")
+                  ? getMediaDeliveryUrl(
+                      storageKey,
+                      media.type,
+                      media.mimeType,
+                    )
+                  : null,
+            },
+          };
+        }),
+      })),
       pagination: {
         page,
         limit,
@@ -1509,6 +1537,8 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
                   width: true,
                   height: true,
                   durationSeconds: true,
+                  storageKey: true,
+                  processingStatus: true,
                   createdAt: true,
                 },
               },
@@ -1544,7 +1574,34 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      return reply.send({ story });
+      return reply.send({
+        story: {
+          ...story,
+          media: story.media.map((attachment) => {
+            const {
+              storageKey,
+              processingStatus,
+              ...media
+            } = attachment.media;
+
+            return {
+              ...attachment,
+              media: {
+                ...media,
+                deliveryUrl:
+                  processingStatus === "READY" &&
+                  (media.type === "IMAGE" || media.type === "VIDEO")
+                    ? getMediaDeliveryUrl(
+                        storageKey,
+                        media.type,
+                        media.mimeType,
+                      )
+                    : null,
+              },
+            };
+          }),
+        },
+      });
     },
   );
 };

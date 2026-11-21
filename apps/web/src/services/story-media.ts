@@ -113,6 +113,7 @@ async function uploadSingle(
   form.append("api_key", intent.apiKey);
   form.append("timestamp", String(intent.timestamp));
   form.append("public_id", intent.publicId);
+  form.append("type", intent.uploadType);
   form.append("overwrite", "false");
   form.append("signature", intent.signature);
 
@@ -135,7 +136,12 @@ async function uploadSingle(
   });
 
   if (!response.ok) {
-    throw new StoryMediaError("Cloudinary upload failed.");
+    const result = await response.json().catch(() => ({}));
+    const message =
+      typeof result.error?.message === "string"
+        ? result.error.message
+        : "Cloudinary upload failed.";
+    throw new StoryMediaError(message);
   }
 }
 
@@ -157,6 +163,7 @@ async function uploadChunked(
     form.append("api_key", intent.apiKey);
     form.append("timestamp", String(intent.timestamp));
     form.append("public_id", intent.publicId);
+    form.append("type", intent.uploadType);
     form.append("overwrite", "false");
     form.append("signature", intent.signature);
 
@@ -181,8 +188,13 @@ async function uploadChunked(
     });
 
     if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      const message =
+        typeof result.error?.message === "string"
+          ? result.error.message
+          : `Video upload failed at byte ${start}.`;
       throw new StoryMediaError(
-        `Video upload failed at byte ${start}.`
+        message
       );
     }
   }

@@ -1,6 +1,6 @@
 
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import MyDrafts from "../components/MyDrafts";
 import ResearchDraftEditor from "../components/ResearchDraftEditor";
 import ResearchStoryComposer from "../components/ResearchStoryComposer";
@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { removeProfileImage, uploadProfileImage } from "../services/profile-images";
 
 import {
+  getMyDrafts,
   getStoriesFeed,
   type FeedStory,
   type DraftStory,
@@ -158,6 +159,34 @@ function StoryCard({ story }: { story: FeedStory }) {
         </div>
       )}
 
+      {story.media.some((item) => item.media.deliveryUrl) && (
+        <div className="story-card-media">
+          {story.media.map((item) => {
+            const { deliveryUrl, type } = item.media;
+
+            if (!deliveryUrl) return null;
+
+            return type === "VIDEO" ? (
+              <video
+                key={item.id}
+                src={deliveryUrl}
+                controls
+                preload="metadata"
+                aria-label={item.caption || "Research video"}
+              />
+            ) : (
+              <img
+                key={item.id}
+                src={deliveryUrl}
+                alt={item.caption || "Research image"}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            );
+          })}
+        </div>
+      )}
+
       <div className="story-footer">
         <span>
           ♡ {formatCount(story._count.reactions)} appreciations
@@ -177,7 +206,8 @@ interface DashboardProps {
 function Dashboard({ publicView = false }: DashboardProps) {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
- const [selectedDraft, setSelectedDraft] =
+  const { draftId } = useParams<{ draftId: string }>();
+  const [selectedDraft, setSelectedDraft] =
   useState<DraftStory | null>(null);
 
 const [showStoryComposer, setShowStoryComposer] = useState(false);
@@ -200,8 +230,64 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   const feedRequestVersion = useRef(0);
   const [refreshFeed, setRefreshFeed] = useState(0);
   const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftLoadError, setDraftLoadError] = useState<string | null>(null);
   
   const initials = getInitials(user?.displayName ?? "C");
+
+  useEffect(() => {
+    if (publicView || !draftId) {
+      if (!draftId) {
+        setSelectedDraft(null);
+        setDraftLoadError(null);
+        setDraftLoading(false);
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDraftFromUrl() {
+      setDraftLoading(true);
+      setDraftLoadError(null);
+      setSelectedDraft(null);
+
+      try {
+        const result = await getMyDrafts();
+        const matchingDraft = result.drafts.find(
+          (draft) => draft.id === draftId
+        );
+
+        if (!matchingDraft) {
+          throw new Error(
+            "This draft could not be found in your account. It may have been published, deleted, or may not belong to you."
+          );
+        }
+
+        if (!cancelled) {
+          setSelectedDraft(matchingDraft);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setDraftLoadError(
+            err instanceof Error
+              ? err.message
+              : "Unable to open this draft. Please try again."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setDraftLoading(false);
+        }
+      }
+    }
+
+    void loadDraftFromUrl();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftId, publicView]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -516,16 +602,32 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 {!publicView && (
   <>
     <MyDrafts
-  onOpenDraft={(draft) => setSelectedDraft(draft)}
+  onOpenDraft={(draft) => navigate(`/dashboard/drafts/${draft.id}`)}
   refreshKey={draftsRefreshKey}
 />
+          {draftId && draftLoading && !selectedDraft && (
+            <p role="status">Opening your draft...</p>
+          )}
+
+          {draftId && draftLoadError && !selectedDraft && (
+            <div role="alert" className="draft-state">
+              <p>{draftLoadError}</p>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard", { replace: true })}
+              >
+                Return to dashboard
+              </button>
+            </div>
+          )}
+
           {selectedDraft && (
   <ResearchDraftEditor
     draft={selectedDraft}
-    onClose={() => setSelectedDraft(null)}
+    onClose={() => navigate("/dashboard", { replace: true })}
     onSaved={(story) => setSelectedDraft(story)}
     onPublished={() => {
-      setSelectedDraft(null);
+      navigate("/dashboard", { replace: true });
       setRefreshFeed((current) => current + 1);
       setDraftsRefreshKey((current) => current + 1);
     }}
@@ -536,7 +638,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   <ResearchStoryComposer
     onCreated={(draft) => {
       setShowStoryComposer(false);
-      setSelectedDraft(draft);
+      navigate(`/dashboard/drafts/${draft.id}`);
     }}
     onCancel={() => setShowStoryComposer(false)}
   />

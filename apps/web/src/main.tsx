@@ -89,6 +89,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/drafts/:draftId" element={<Dashboard />} />
           </Route>
 
           <Route
