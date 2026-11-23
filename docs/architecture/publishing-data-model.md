@@ -221,7 +221,7 @@ Requirements:
 - Media ownership and post access must be checked server-side.
 - Only READY media may be used to complete publication of a post that requires that media.
 - Video duration must be checked using trusted server-side or media-provider metadata.
-- Valid video duration is 90-300 seconds inclusive.
+- Valid video duration is at least 90 seconds; file size is capped at 500 MB and duration has no upper bound.
 - File type, size, integrity and safety must be validated.
 - Failed uploads must produce actionable error states.
 - Media associated with unpublished drafts must remain private to the draft author.
@@ -721,7 +721,7 @@ Before a draft transitions to PUBLISHED, the backend must validate:
 - At least one contributor, and a valid server-generated authorship attestation bound to the current contributor-list version.
 - DOI and source confirmation where provided.
 - Media type and media readiness.
-- Video duration of 90–300 seconds inclusive.
+- Video duration of at least 90 seconds, subject to the 500 MB file-size cap.
 - Applicable rights and permissions confirmations.
 - All other required publication rules.
 - Audience is one of PUBLIC, MEMBERS or FOLLOWERS.

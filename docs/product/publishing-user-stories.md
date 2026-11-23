@@ -64,8 +64,9 @@ As a researcher, I want to publish a written research story so that I can commun
 As a researcher, I want to publish a short research video so that I can explain findings, demonstrate methods, and communicate research visually.
 
 **Acceptance criteria:**
-- The system accepts supported video formats.
-- Video duration must be between 90 and 300 seconds inclusive.
+- The system accepts MP4 (preferred), MOV, and WebM video formats, converting compatible sources to MP4 playback renditions.
+- MKV and AVI remain unsupported pending evaluation.
+- Video duration must be at least 90 seconds; the 500 MB upload-size cap applies, with no duration maximum.
 - The server or trusted processing provider validates actual duration.
 - The system provides upload and processing feedback.
 - Failed or invalid uploads cannot be published.
@@ -446,7 +447,7 @@ The first Citeface MVP must support:
 - Server-side audience enforcement across feeds, profiles, search, direct links, APIs, notifications, and media delivery.
 - Support for changing the audience of published posts, with immediate access-control enforcement and audit history.
 - Public access to stories without requiring authentication.
-- Video duration validation between 90 and 300 seconds inclusive.
+- MP4/MOV/WebM upload and conversion with a 90-second minimum duration and 500 MB maximum file size.
 - Secure media upload and processing.
 - Author and contributor attribution.
 - Optional DOI and source references.

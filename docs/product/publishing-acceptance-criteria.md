@@ -89,9 +89,11 @@ The criteria cover:
 - Unsupported formats are rejected.
 - Actual video duration is validated using trusted media metadata or processing.
 - The minimum duration is 90 seconds.
-- The maximum duration is 300 seconds.
-- Videos of exactly 90 and 300 seconds are accepted.
-- Videos shorter than 90 seconds or longer than 300 seconds are rejected.
+- There is no duration maximum; the 500 MB upload-size cap still applies.
+- MP4 is preferred; MOV and WebM are also accepted and converted to MP4 playback renditions where compatible.
+- MKV and AVI remain unsupported pending evaluation.
+- Videos of 90 seconds or longer are accepted, subject to the upload-size cap.
+- Videos shorter than 90 seconds are rejected.
 - Processing failure prevents publication.
 - Successful videos are playable after publication.
 
@@ -718,7 +720,7 @@ At minimum, the test suite should cover:
 - Media-state validation.
 - Publication readiness checks.
 - Contributor and rights-confirmation validation.
-- Video duration boundaries (89, 90, 300 and 301 seconds).
+- Video duration boundaries (89, 90 and 301 seconds).
 - Central audience policy matrix (draft, author, PUBLIC, MEMBERS, FOLLOWERS, archived, retracted, moderation states).
 - Contributor-list versioning and attestation binding.
 

@@ -13,6 +13,12 @@ interface DraftMediaManagerProps {
   draftId: string;
 }
 
+const VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+]);
+
 export default function DraftMediaManager({
   draftId,
 }: DraftMediaManagerProps) {
@@ -81,8 +87,8 @@ export default function DraftMediaManager({
   );
 
   const accept = hasVideo
-    ? "video/mp4"
-    : "image/jpeg,image/png,image/webp,video/mp4";
+    ? [...VIDEO_MIME_TYPES].join(",")
+    : `image/jpeg,image/png,image/webp,${[...VIDEO_MIME_TYPES].join(",")}`;
 
   async function handleUpload(
     event: React.ChangeEvent<HTMLInputElement>
@@ -95,10 +101,10 @@ export default function DraftMediaManager({
     setMessage("");
 
     const isImage = file.type.startsWith("image/");
-    const isVideo = file.type === "video/mp4";
+    const isVideo = VIDEO_MIME_TYPES.has(file.type);
 
     if (!isImage && !isVideo) {
-      setError("Choose a JPEG, PNG, WebP image or MP4 video.");
+      setError("Choose a JPEG, PNG, or WebP image, or an MP4, MOV, or WebM video.");
       event.target.value = "";
       return;
     }
@@ -186,12 +192,12 @@ export default function DraftMediaManager({
 
     const isExpectedType =
       attachment.media.type === "VIDEO"
-        ? file.type === "video/mp4"
+        ? VIDEO_MIME_TYPES.has(file.type)
         : ["image/jpeg", "image/png", "image/webp"].includes(file.type);
     if (!isExpectedType) {
       setError(
         attachment.media.type === "VIDEO"
-          ? "Replace this video with an MP4 video."
+          ? "Replace this video with an MP4, MOV, or WebM video."
           : "Replace this image with a JPEG, PNG, or WebP image.",
       );
       event.target.value = "";
@@ -257,7 +263,7 @@ export default function DraftMediaManager({
         <div>
           <h3>Story media</h3>
           <p>
-            Attach up to 10 images or one MP4 video to this draft.
+            Attach up to 10 images or one video (MP4 preferred; MOV and WebM supported).
           </p>
         </div>
         <button
@@ -334,7 +340,7 @@ export default function DraftMediaManager({
                   type="file"
                   accept={
                     attachment.media.type === "VIDEO"
-                      ? "video/mp4"
+                      ? [...VIDEO_MIME_TYPES].join(",")
                       : "image/jpeg,image/png,image/webp"
                   }
                   aria-label={`Choose replacement for ${attachment.media.type.toLowerCase()} ${attachment.sortOrder + 1}`}

@@ -6,7 +6,7 @@
 **Product:** Citeface
 **Tagline:** Research. Connect. Discover.
 
-> Decisions are recorded in ADR-0002 and ADR-0003 (both accepted 2026-11-05). Values marked configurable may be tuned without code changes. See `docs/reconciliation/reconciliation-report.md`.
+> Decisions are recorded in ADR-0002 and ADR-0003 (accepted 2026-11-05) and ADR-0005 (accepted 2026-11-23). Values marked configurable may be tuned without code changes. See `docs/reconciliation/reconciliation-report.md`.
 
 ---
 
@@ -58,7 +58,7 @@ The form supports: title or headline; main text; research topics or disciplines;
 
 Short research videos: explanations, short findings, laboratory demonstrations, research processes, video summaries and short presentations.
 
-The video duration requirement is **90–300 seconds inclusive**. The server or trusted media-processing provider must validate actual media duration; client-side validation alone is insufficient.
+MP4 is the preferred video format; MOV and WebM are also accepted. Cloudinary converts compatible sources to MP4 playback renditions. MKV and AVI remain unsupported pending evaluation. Videos must be at least **90 seconds**; there is no duration maximum beyond the 500 MB upload-size cap. The server or trusted media-processing provider must validate actual media duration; client-side validation alone is insufficient.
 
 ### 3.3 PHOTO
 
@@ -231,11 +231,11 @@ Before publishing a post containing media the system confirms that required uplo
 
 The system must validate file type and size on the server; reject unsupported or invalid files; use secure media storage; avoid exposing storage credentials or private infrastructure; restrict access to unpublished media; provide clear upload progress and failure feedback; and avoid making media public before the post is published and authorized for access.
 
-Launch limits (configurable without code changes; ADR-0003 D4): images are JPEG, PNG or WebP only, up to 10 per PHOTO story and 10 MB each (SVG and GIF rejected); a VIDEO story has one video, MP4 (H.264/AAC), up to 500 MB and 90-300 seconds, transcoded to 720p with a 480p fallback and a generated thumbnail. The storage provider remains a technical choice for the architecture build.
+Launch limits (configurable without code changes; ADR-0003 D4 and ADR-0005): images are JPEG, PNG or WebP only, up to 10 per PHOTO story and 10 MB each (SVG and GIF rejected); a VIDEO story has one MP4-preferred, MOV, or WebM source, up to 500 MB and at least 90 seconds with no duration maximum. Cloudinary converts compatible sources to MP4 playback renditions, transcodes to 720p with a 480p fallback, and generates a thumbnail. MKV and AVI remain unsupported pending evaluation.
 
 ### 8.2 Video requirements
 
-- Minimum duration 90 seconds; maximum 300 seconds; both inclusive.
+- Duration is at least 90 seconds; the 500 MB upload-size cap still applies.
 - Duration validated using trusted media metadata or processing.
 - Failed validation prevents publication.
 - Playback provides appropriate user controls.

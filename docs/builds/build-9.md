@@ -13,7 +13,8 @@ processing, preview, publication, and playback.
 
 - Audit the Cloudinary signed upload flow, limits, chunking, webhook, and
   cleanup; do not expose provider secrets or storage keys.
-- Support approved image formats and MP4 videos of 90-300 seconds inclusive.
+- Support approved image formats and MP4-preferred, MOV, and WebM videos of at least 90 seconds and up to 500 MB; keep MKV and AVI unsupported pending evaluation.
+- Convert compatible video sources to MP4 playback renditions through Cloudinary.
 - Show upload progress, processing, ready, retry, and failure states.
 - Let authors remove or retry failed attachments without losing draft content.
 - Generate access-checked signed delivery links; media follows its parent
@@ -37,7 +38,7 @@ processing, preview, publication, and playback.
 |---|---|---|
 | 9.1 - Upload infrastructure | Cloudinary connection, image upload, attachment registration | Product owner reports image upload, attachment registration, and `READY` status verified |
 | 9.2 - Media preview and management | Actual image and video previews in the composer, understandable processing states, attachment removal | Owners can preview ready media, see pending/processing/ready/failed state, and remove an attachment safely |
-| 9.3 - Video upload and processing | MP4 upload, server-side duration/metadata validation, processing callbacks, thumbnail/rendition readiness | Valid 90-300 second video reaches `READY`; failed or invalid video cannot publish |
+| 9.3 - Video upload and processing | MP4/MOV/WebM upload, Cloudinary conversion, server-side duration/metadata validation, processing callbacks, thumbnail/rendition readiness | Valid videos of at least 90 seconds and up to 500 MB reach `READY`; unsupported formats or shorter videos cannot publish |
 | 9.4 - Playback | Responsive video player, controls, accessible labels/captions | Ready video plays on supported desktop/mobile browsers without autoplay |
 | 9.5 - Reliability and security | Retry/recovery, authorization, upload limits, privacy, publication gate | Owner-only draft media, validated upload limits, and ready-media publication checks pass |
 | 9.6 - Build acceptance | Focused automated tests and real browser verification | Automated gates pass and image/video journeys are verified in a browser with provider configuration |

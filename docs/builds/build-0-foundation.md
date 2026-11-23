@@ -140,7 +140,7 @@ Build 0 creates the foundation and documents decisions. Product implementation b
 ## 8. Current publishing decisions to carry forward
 
 - Supported types: story, video, photo, paper announcement and methods.
-- Video duration: 90–300 seconds inclusive.
+- Video duration: at least 90 seconds, with a 500 MB file-size cap and no duration maximum; MP4 preferred, MOV and WebM accepted.
 - DOI/original-paper link: optional.
 - Audience: PUBLIC, MEMBERS or FOLLOWERS; PUBLIC is the default. Audience permissions are enforced server-side across all relevant access paths.
 - Audience changes after publication are allowed for the author, immediately enforced and recorded in audit history.

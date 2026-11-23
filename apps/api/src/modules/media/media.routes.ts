@@ -12,7 +12,13 @@ const mediaRoutes: FastifyPluginAsync = async (app) => {
   app.post<{
     Body: {
       originalName: string;
-      mimeType: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
+      mimeType:
+        | "image/jpeg"
+        | "image/png"
+        | "image/webp"
+        | "video/mp4"
+        | "video/quicktime"
+        | "video/webm";
       sizeBytes: number;
     };
   }>(
@@ -27,7 +33,14 @@ const mediaRoutes: FastifyPluginAsync = async (app) => {
             originalName: { type: "string", minLength: 1, maxLength: 255 },
             mimeType: {
               type: "string",
-              enum: ["image/jpeg", "image/png", "image/webp", "video/mp4"],
+              enum: [
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+                "video/mp4",
+                "video/quicktime",
+                "video/webm",
+              ],
             },
             sizeBytes: { type: "integer", minimum: 1 },
           },

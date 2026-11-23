@@ -5,7 +5,7 @@
 **Status:** Proposed implementation specification; reconcile with codebase audit before implementation.
 **Supersedes:** v1.0 (4 November 2026)
 
-> Decisions are recorded in ADR-0002 and ADR-0003 (both accepted 2026-11-05). Values marked configurable may be tuned without code changes. See `docs/reconciliation/reconciliation-report.md`.
+> Decisions are recorded in ADR-0002 and ADR-0003 (accepted 2026-11-05) and ADR-0005 (accepted 2026-11-23). Values marked configurable may be tuned without code changes. See `docs/reconciliation/reconciliation-report.md`.
 
 ## 1. Purpose and scope
 
@@ -57,7 +57,7 @@ Verification is a profile status/claim workflow, not a role that grants scientif
 17. Published stories support documented editing, archival, correction and retraction with appropriate audit history.
 18. Retraction is a distinct visible status, not ordinary deletion or archival. Retractions of Citeface posts must be distinguishable from retractions of external papers a post references.
 19. Supported content types are `STORY`, `VIDEO`, `PHOTO`, `PAPER` and `METHODS`.
-20. Video duration is 90–300 seconds inclusive, validated from trusted media metadata.
+20. Video duration is at least 90 seconds, validated from trusted media metadata; the upload-size cap is 500 MB and there is no duration maximum.
 21. Media-processing state is separate from post lifecycle state.
 22. No confidential/unpublished material is sent to external AI in the MVP.
 23. All state-changing operations require server-side validation and authorization.
@@ -329,8 +329,8 @@ If equivalent endpoints already exist, document and reuse them rather than addin
 
 **Behaviour:**
 - Allow-list MIME types and inspect file signatures; do not trust extension or client MIME.
-- Enforce byte limits. Launch limits (configurable without code changes; ADR-0003 D4): images are JPEG, PNG or WebP only, up to 10 per PHOTO story and 10 MB each (SVG and GIF rejected); a VIDEO story has one video, MP4 (H.264/AAC), up to 500 MB and 90-300 seconds, transcoded to 720p with a 480p fallback and a generated thumbnail.
-- Video duration must be **90–300 seconds inclusive**, taken from trusted server-side or provider metadata, never client-reported only.
+- Enforce byte limits. Launch limits (configurable without code changes; ADR-0003 D4 and ADR-0005): images are JPEG, PNG or WebP only, up to 10 per PHOTO story and 10 MB each (SVG and GIF rejected); a VIDEO story has one MP4-preferred, MOV, or WebM source, up to 500 MB and at least 90 seconds with no duration maximum. Cloudinary converts compatible sources to MP4 playback renditions, transcodes to 720p with a 480p fallback, and generates a thumbnail. MKV and AVI remain unsupported pending evaluation.
+- Video duration must be **at least 90 seconds**, taken from trusted server-side or provider metadata, never client-reported only. The 500 MB file-size cap applies regardless of duration.
 - Store objects privately; use random storage keys, never user-supplied filenames.
 - Draft media is never reachable through guessable or permanent public URLs.
 - Published media is delivered according to the parent story's **current audience** (see 3.2); a completed upload or finished processing does not make media public.
@@ -340,9 +340,9 @@ If equivalent endpoints already exist, document and reuse them rather than addin
 - Purge abandoned uploads after 24 hours and media of deleted drafts within 7 days (ADR-0003 D3); consider malware scanning where proportionate.
 - Reject executable and unsupported formats.
 
-**Acceptance criteria:** allowed media uploads; unsupported/oversize rejected; ownership enforced; state tracked; video of exactly 90 s and 300 s accepted, 89 s and 301 s rejected; draft media private; published media follows story audience, including immediately after an audience change; failures surface safely without destroying the draft.
+**Acceptance criteria:** MP4, MOV, and WebM uploads accepted and converted to MP4 playback renditions where compatible; MKV and AVI rejected pending evaluation; unsupported/oversize rejected; ownership enforced; state tracked; 89-second videos rejected, videos of 90 seconds or longer accepted subject to the 500 MB cap; draft media private; published media follows story audience, including immediately after an audience change; failures surface safely without destroying the draft.
 
-**Tests:** allowed image; allowed video; spoofed MIME; invalid file signature; oversize file; duration 89/90/300/301 s; client-reported duration ignored; unauthorised media access; cross-user deletion; abandoned upload cleanup; processing failure and retry; draft media denied to others; published PUBLIC media to signed-out; MEMBERS media denied signed-out; FOLLOWERS media denied after unfollow; media denied after audience restricted; cached/signed URL expiry.
+**Tests:** allowed image; MP4/MOV/WebM upload and MP4 renditions; MKV/AVI rejection; spoofed MIME; invalid file signature; oversize file; duration boundaries 89/90/301 s; client-reported duration ignored; unauthorised media access; cross-user deletion; abandoned upload cleanup; processing failure and retry; draft media denied to others; published PUBLIC media to signed-out; MEMBERS media denied signed-out; FOLLOWERS media denied after unfollow; media denied after audience restricted; cached/signed URL expiry.
 
 ### F-09 Image-story ordering (PHOTO)
 
@@ -726,7 +726,7 @@ Adapt paths and naming to the current API rather than creating duplicate endpoin
 ## 8. Test strategy
 
 ### Unit tests
-Validators and normalisers; permission rules including the central audience policy (draft, author, PUBLIC, MEMBERS, FOLLOWERS, archived, retracted, moderation states); default audience; audience-change validation; publication readiness; status transitions; media type/size/duration validation (89/90/300/301 s); feed filtering and ordering; contributor attestation logic and list versioning.
+Validators and normalisers; permission rules including the central audience policy (draft, author, PUBLIC, MEMBERS, FOLLOWERS, archived, retracted, moderation states); default audience; audience-change validation; publication readiness; status transitions; media type/size/duration validation (89/90/301 s); feed filtering and ordering; contributor attestation logic and list versioning.
 
 ### Integration tests
 Auth routes with database; profile ownership; draft create/list/update/delete/publish lifecycle and ownership; audience enforcement on every read path; audience change and unfollow revocation; media association and access control; feed and search visibility; follows, reactions and saves; comments and notifications access; reports and moderation; correction/retraction audit history.
@@ -737,7 +737,7 @@ Auth routes with database; profile ownership; draft create/list/update/delete/pu
 3. Create an incomplete draft → sign out/in → reopen, edit, resave.
 4. Another account (and an administrator) cannot access the draft; it is absent from feed, profile, search and media URLs.
 5. Publish a STORY; PUBLIC is the default; signed-out visitor can view it.
-6. Publish a VIDEO story (90–300 s) → upload → process → play; invalid duration blocked.
+6. Publish a VIDEO story (90 s or longer, up to 500 MB) → upload → process → play; invalid formats or duration are blocked.
 7. Publish a PHOTO story → reorder images → publish.
 8. Publish a MEMBERS story: signed-out denied, member allowed.
 9. Publish a FOLLOWERS story: follower allowed, non-follower denied, denied after unfollow.

@@ -27,6 +27,33 @@ vi.mock("cloudinary", () => ({
   v2: cloudinaryMock,
 }));
 
+type TestMediaMimeType =
+  | "image/png"
+  | "video/mp4"
+  | "video/quicktime"
+  | "video/webm"
+  | "video/x-matroska"
+  | "video/x-msvideo";
+
+type TestVideoMimeType = Extract<TestMediaMimeType, `video/${string}`>;
+
+const testFilenames: Record<TestMediaMimeType, string> = {
+  "image/png": "abstract.png",
+  "video/mp4": "research.mp4",
+  "video/quicktime": "research.mov",
+  "video/webm": "research.webm",
+  "video/x-matroska": "research.mkv",
+  "video/x-msvideo": "research.avi",
+};
+
+const testVideoFormats: Record<TestVideoMimeType, string> = {
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+  "video/x-matroska": "mkv",
+  "video/x-msvideo": "avi",
+};
+
 let app: FastifyInstance;
 
 function nextUserNumber() {
@@ -34,7 +61,7 @@ function nextUserNumber() {
 }
 
 async function createIntent(
-  mimeType: "image/png" | "video/mp4" = "image/png",
+  mimeType: TestMediaMimeType = "image/png",
   sizeBytes = 1024,
 ) {
   const auth = await registerAndLogin(app, nextUserNumber());
@@ -46,7 +73,7 @@ async function createIntent(
     url: "/media/upload-intents",
     cookies: auth.cookie,
     payload: {
-      originalName: mimeType === "image/png" ? "abstract.png" : "research.mp4",
+      originalName: testFilenames[mimeType],
       mimeType,
       sizeBytes,
     },
@@ -79,8 +106,29 @@ afterAll(async () => {
 });
 
 describe("F-08 Cloudinary media lifecycle", () => {
-  async function createProcessingVideoForWebhook() {
-    const { auth, response } = await createIntent("video/mp4", 1024 * 1024);
+  it("explains that video uploads require a public HTTPS processing callback", async () => {
+    const webhookUrl = process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL;
+    delete process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL;
+
+    try {
+      const { response } = await createIntent("video/mp4");
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error).toContain(
+        "CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL",
+      );
+      expect(response.json().error).toContain("publicly reachable HTTPS");
+    } finally {
+      if (webhookUrl === undefined) {
+        delete process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL;
+      } else {
+        process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL = webhookUrl;
+      }
+    }
+  });
+
+  async function createProcessingVideoForWebhook(mimeType: TestVideoMimeType = "video/mp4") {
+    const { auth, response } = await createIntent(mimeType, 1024 * 1024);
     expect(response.statusCode).toBe(201);
 
     const intent = response.json();
@@ -90,7 +138,7 @@ describe("F-08 Cloudinary media lifecycle", () => {
       resource_type: "video",
       type: "authenticated",
       bytes: 1024 * 1024,
-      format: "mp4",
+      format: testVideoFormats[mimeType],
       duration: 120,
       width: 1280,
       height: 720,
@@ -193,6 +241,69 @@ describe("F-08 Cloudinary media lifecycle", () => {
       },
     });
   });
+
+  it.each([
+    { mimeType: "video/mp4", format: "mp4" },
+    { mimeType: "video/quicktime", format: "mov" },
+    { mimeType: "video/webm", format: "webm" },
+  ] as const)(
+    "accepts $mimeType uploads and processes them to MP4 renditions",
+    async ({ mimeType }) => {
+      const { mediaId, publicId } = await createProcessingVideoForWebhook(mimeType);
+      const notification = await sendEagerNotification({
+        notification_type: "eager",
+        public_id: publicId,
+        eager: successfulEagerResults,
+      });
+      const media = await prisma.mediaAsset.findUniqueOrThrow({
+        where: { id: mediaId },
+      });
+
+      expect(notification.response.statusCode).toBe(200);
+      expect(notification.response.json().status).toBe("READY");
+      expect(media.mimeType).toBe(mimeType);
+      expect(media.processingStatus).toBe("READY");
+    },
+  );
+
+  it("accepts a video when Cloudinary has not reported source dimensions", async () => {
+    const { auth, response } = await createIntent("video/mp4", 1024 * 1024);
+    const intent = response.json();
+
+    cloudinaryMock.api.resource.mockResolvedValue({
+      public_id: intent.publicId,
+      resource_type: "video",
+      type: "authenticated",
+      format: "mp4",
+      bytes: 1024 * 1024,
+      duration: 120,
+    });
+
+    const completion = await app.inject({
+      method: "POST",
+      url: `/media/${intent.mediaId}/complete`,
+      cookies: auth.cookie,
+      payload: {},
+    });
+
+    expect(completion.statusCode).toBe(200);
+    expect(completion.json().status).toBe("PROCESSING");
+
+    const media = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: intent.mediaId },
+    });
+    expect(media.width).toBeNull();
+    expect(media.height).toBeNull();
+  });
+
+  it.each(["video/x-matroska", "video/x-msvideo"] as const)(
+    "does not yet accept %s uploads",
+    async (mimeType) => {
+      const { response } = await createIntent(mimeType);
+
+      expect(response.statusCode).toBe(400);
+    },
+  );
 
   it("uses the successful 480p rendition when 720p generation fails", async () => {
     const { mediaId, publicId } = await createProcessingVideoForWebhook();
@@ -718,7 +829,7 @@ describe("F-08 Cloudinary media lifecycle", () => {
     expect(cloudinaryMock.api.resource).toHaveBeenCalledTimes(1);
   });
 
-  it.each([89, 301])(
+  it.each([89])(
     "rejects a video with duration %i seconds",
     async (duration) => {
       const { auth, response } = await createIntent("video/mp4", 1024 * 1024);
@@ -752,7 +863,7 @@ describe("F-08 Cloudinary media lifecycle", () => {
     },
   );
 
-  it.each([90, 300])(
+  it.each([90, 300, 301])(
     "accepts a video with duration %i seconds into PROCESSING",
     async (duration) => {
       const { auth, response } = await createIntent("video/mp4", 1024 * 1024);

@@ -37,7 +37,7 @@ For each row, record file paths, implementation status, tests and evidence.
 | Contributor list versioning and authorship attestation | Not inspected | | |
 | Published contributor changes and renewed attestation | Not inspected | | |
 | Rights and permissions confirmation | Not inspected | | |
-| Video duration validation 90-300 s inclusive (trusted metadata) | Not inspected | | |
+| Video duration validation (90 s minimum; trusted metadata; 500 MB size cap) | Not inspected | | |
 | Media processing states separate from post status | Not inspected | | |
 | Archive, correction and retraction lifecycle | Not inspected | | |
 | Story edit/publish | Not inspected | | |

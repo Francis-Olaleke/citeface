@@ -97,7 +97,7 @@ Short research videos lead the content identity. Initial formats include video a
 Supported from the first meaningful release. Formats include graphical abstracts, infographics, diagrams, charts, illustrations and multi-image presentations. Video must not be compulsory.
 
 ### Content types and video duration
-The first release supports five content types: STORY (written research explanations), VIDEO, PHOTO (images and image-slide stories), PAPER (paper announcements) and METHODS. Video leads the feed identity; other types are first-class. Short videos are 90-300 seconds inclusive, validated from trusted media metadata.
+The first release supports five content types: STORY (written research explanations), VIDEO, PHOTO (images and image-slide stories), PAPER (paper announcements) and METHODS. Video leads the feed identity; other types are first-class. Videos are at least 90 seconds, validated from trusted media metadata, and limited to 500 MB with no duration maximum. MP4 is preferred; MOV and WebM are accepted for Cloudinary conversion to MP4 playback renditions.
 
 ### Research story information
 A story may include:
@@ -226,7 +226,7 @@ The MVP is the smallest credible version that delivers the core promise. It must
 - Draft and publish workflows.
 - Five content types: STORY, VIDEO, PHOTO, PAPER and METHODS.
 - Text explanations.
-- Short-video upload and playback (90-300 seconds inclusive).
+- Video upload and playback (at least 90 seconds and up to 500 MB; MP4 preferred, MOV and WebM accepted).
 - Image upload and image-slide (PHOTO) stories.
 - Rights and permissions confirmation and versioned contributor attestation.
 - Categories, contributors, sources and status labels.

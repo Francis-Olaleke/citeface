@@ -24,7 +24,10 @@ function getEagerWebhookUrl() {
   const value = process.env.CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL;
 
   if (!value) {
-    throw new Error("Cloudinary eager webhook URL is not configured.");
+    throw new MediaUploadError(
+      "Video uploads require CITEFACE_CLOUDINARY_EAGER_WEBHOOK_URL to be set to a publicly reachable HTTPS endpoint.",
+      503,
+    );
   }
 
   let parsed: URL;
@@ -32,7 +35,10 @@ function getEagerWebhookUrl() {
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error("Cloudinary eager webhook URL is invalid.");
+    throw new MediaUploadError(
+      "The configured video-processing webhook URL is invalid.",
+      503,
+    );
   }
 
   if (
@@ -40,7 +46,10 @@ function getEagerWebhookUrl() {
     parsed.hostname === "localhost" ||
     parsed.hostname === "127.0.0.1"
   ) {
-    throw new Error("Cloudinary eager webhook URL must be publicly reachable HTTPS.");
+    throw new MediaUploadError(
+      "The video-processing webhook URL must be publicly reachable HTTPS.",
+      503,
+    );
   }
 
   return parsed.toString();
@@ -55,6 +64,8 @@ const MIME_TYPES = {
   "image/png": { type: "IMAGE" as const, resourceType: "image" as const, formats: ["png"] },
   "image/webp": { type: "IMAGE" as const, resourceType: "image" as const, formats: ["webp"] },
   "video/mp4": { type: "VIDEO" as const, resourceType: "video" as const, formats: ["mp4"] },
+  "video/quicktime": { type: "VIDEO" as const, resourceType: "video" as const, formats: ["mov"] },
+  "video/webm": { type: "VIDEO" as const, resourceType: "video" as const, formats: ["webm"] },
 };
 
 export class MediaUploadError extends Error {
@@ -432,22 +443,26 @@ export async function completeMediaUpload(
     };
   }
 
-  // The original MP4 is verified, but it is not READY until the
+  // The original video is verified, but it is not READY until the
   // asynchronous 720p/480p transcode and thumbnail workflow completes.
   if (
-    format !== "mp4" ||
+    !expected.formats.includes(format) ||
     !Number.isFinite(asset.duration) ||
-    asset.duration! < 90 ||
-    asset.duration! > 300 ||
-    !Number.isSafeInteger(asset.width) ||
-    !Number.isSafeInteger(asset.height) ||
-    (asset.width ?? 0) <= 0 ||
-    (asset.height ?? 0) <= 0
+    asset.duration! < 90
   ) {
     throw new MediaUploadError(
-      "The video must be an MP4 between 90 and 300 seconds with valid dimensions.",
+      "The video must be MP4, MOV, or WebM and be at least 90 seconds long.",
     );
   }
+
+  const width =
+    Number.isSafeInteger(asset.width) && asset.width! > 0
+      ? asset.width
+      : undefined;
+  const height =
+    Number.isSafeInteger(asset.height) && asset.height! > 0
+      ? asset.height
+      : undefined;
 
   const updated = await prisma.mediaAsset.updateMany({
     where: {
@@ -459,8 +474,8 @@ export async function completeMediaUpload(
     data: {
       processingStatus: "PROCESSING",
       processingStartedAt: new Date(),
-      width: asset.width,
-      height: asset.height,
+      width,
+      height,
       durationSeconds: Math.round(asset.duration!),
       sizeBytes: BigInt(actualSize!),
       uploadExpiresAt: null,
