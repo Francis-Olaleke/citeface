@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getDraftMedia,
+  replaceDraftMedia,
   removeDraftMedia,
   uploadMedia,
   StoryMediaError,
@@ -16,6 +17,7 @@ export default function DraftMediaManager({
   draftId,
 }: DraftMediaManagerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const replacementInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const [attachments, setAttachments] = useState<
     DraftMediaAttachment[]
@@ -24,6 +26,7 @@ export default function DraftMediaManager({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [replacingId, setReplacingId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [previewErrors, setPreviewErrors] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
@@ -174,6 +177,63 @@ export default function DraftMediaManager({
     }
   }
 
+  async function handleReplace(
+    attachment: DraftMediaAttachment,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isExpectedType =
+      attachment.media.type === "VIDEO"
+        ? file.type === "video/mp4"
+        : ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+    if (!isExpectedType) {
+      setError(
+        attachment.media.type === "VIDEO"
+          ? "Replace this video with an MP4 video."
+          : "Replace this image with a JPEG, PNG, or WebP image.",
+      );
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize =
+      attachment.media.type === "VIDEO"
+        ? 500 * 1024 * 1024
+        : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(
+        attachment.media.type === "VIDEO"
+          ? "The video exceeds the 500 MB upload limit."
+          : "The image exceeds the 10 MB upload limit.",
+      );
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    setReplacingId(attachment.id);
+
+    try {
+      const result = await replaceDraftMedia(draftId, attachment.id, file);
+      setMessage(result.cleanupWarning
+        ? "Media replaced, but the previous file could not be fully removed from storage."
+        : `${attachment.media.type === "VIDEO" ? "Video" : "Image"} replaced successfully.`);
+      await refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not replace this media. Please try again.",
+      );
+    } finally {
+      setReplacingId(null);
+      event.target.value = "";
+    }
+  }
+
   function getStatusLabel(status: string) {
     switch (status) {
       case "PENDING_UPLOAD":
@@ -204,7 +264,7 @@ export default function DraftMediaManager({
           type="button"
           className="draft-media-refresh"
           onClick={() => void refresh()}
-          disabled={loading || uploading}
+          disabled={loading || uploading || replacingId !== null || removingId !== null}
         >
           Refresh
         </button>
@@ -220,7 +280,7 @@ export default function DraftMediaManager({
         onChange={(event) => setCaption(event.target.value)}
         maxLength={500}
         placeholder="Add a caption for this media"
-        disabled={uploading}
+        disabled={uploading || replacingId !== null}
       />
 
       <div className="draft-media-upload">
@@ -229,7 +289,13 @@ export default function DraftMediaManager({
           type="file"
           accept={accept}
           onChange={(event) => void handleUpload(event)}
-          disabled={uploading || hasVideo || imageCount >= 10}
+          disabled={
+            uploading ||
+            replacingId !== null ||
+            removingId !== null ||
+            hasVideo ||
+            imageCount >= 10
+          }
         />
         {uploading && (
           <span role="status">Uploading media to secure storage...</span>
@@ -261,6 +327,25 @@ export default function DraftMediaManager({
 
             return (
               <li key={attachment.id}>
+                <input
+                  ref={(element) => {
+                    replacementInputs.current[attachment.id] = element;
+                  }}
+                  type="file"
+                  accept={
+                    attachment.media.type === "VIDEO"
+                      ? "video/mp4"
+                      : "image/jpeg,image/png,image/webp"
+                  }
+                  aria-label={`Choose replacement for ${attachment.media.type.toLowerCase()} ${attachment.sortOrder + 1}`}
+                  hidden
+                  onChange={(event) => void handleReplace(attachment, event)}
+                  disabled={
+                    uploading ||
+                    replacingId !== null ||
+                    removingId !== null
+                  }
+                />
                 {isReady &&
                   attachment.media.deliveryUrl &&
                   !previewErrors[attachment.id] && (
@@ -357,14 +442,35 @@ export default function DraftMediaManager({
                       </button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      className="draft-media-remove"
-                      onClick={() => setConfirmRemoveId(attachment.id)}
-                      disabled={uploading || removingId !== null}
-                    >
-                      Remove
-                    </button>
+                    <div className="draft-media-actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          replacementInputs.current[attachment.id]?.click()
+                        }
+                        disabled={
+                          uploading ||
+                          replacingId !== null ||
+                          removingId !== null
+                        }
+                      >
+                        {replacingId === attachment.id
+                          ? "Replacing..."
+                          : "Replace"}
+                      </button>
+                      <button
+                        type="button"
+                        className="draft-media-remove"
+                        onClick={() => setConfirmRemoveId(attachment.id)}
+                        disabled={
+                          uploading ||
+                          replacingId !== null ||
+                          removingId !== null
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
                   )}
                 </div>
               </li>

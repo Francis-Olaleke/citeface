@@ -103,6 +103,34 @@ export async function removeDraftMedia(
   );
 }
 
+export async function replaceDraftMedia(
+  storyId: string,
+  attachmentId: string,
+  file: File,
+): Promise<{ cleanupWarning: boolean }> {
+  const intent = await createUploadIntent(file);
+
+  if (intent.requiresChunking) {
+    await uploadChunked(file, intent);
+  } else {
+    await uploadSingle(file, intent);
+  }
+
+  await request(`/media/${encodeURIComponent(intent.mediaId)}/complete`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+  const result = await request<{ cleanupWarning?: boolean }>(
+    `/stories/${encodeURIComponent(storyId)}/media/${encodeURIComponent(attachmentId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ mediaAssetId: intent.mediaId }),
+    },
+  );
+  return { cleanupWarning: result.cleanupWarning === true };
+}
+
 export async function createUploadIntent(file: File) {
   return request<MediaUploadIntent>("/media/upload-intents", {
     method: "POST",

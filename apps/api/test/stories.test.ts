@@ -1373,6 +1373,117 @@ describe("F-05.4 research story publishing", () => {
     );
   });
 
+  it("replaces an image while preserving its attachment position and caption", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const original = await createAttachableMedia(storyId);
+    const replacement = await createAttachableMedia(storyId);
+    const attachment = await prisma.storyMedia.create({
+      data: {
+        storyId,
+        mediaAssetId: original.id,
+        sortOrder: 2,
+        caption: "Original figure caption",
+      },
+    });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/stories/${storyId}/media/${attachment.id}`,
+      cookies: cookie,
+      payload: { mediaAssetId: replacement.id },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      success: true,
+      sortOrder: 2,
+      caption: "Original figure caption",
+    });
+    expect(
+      await prisma.storyMedia.findUniqueOrThrow({
+        where: { id: attachment.id },
+      }),
+    ).toMatchObject({
+      storyId,
+      mediaAssetId: replacement.id,
+      sortOrder: 2,
+      caption: "Original figure caption",
+    });
+    expect(await prisma.mediaAsset.findUnique({ where: { id: original.id } })).toBeNull();
+    expect(await prisma.mediaAsset.findUnique({ where: { id: replacement.id } })).not.toBeNull();
+    expect(cloudinaryMock.api.delete_resources).toHaveBeenCalledWith(
+      [original.storageKey],
+      {
+        resource_type: "image",
+        type: "authenticated",
+        invalidate: true,
+      },
+    );
+  });
+
+  it("rejects replacing an image with a video and keeps the current attachment", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const original = await createAttachableMedia(storyId);
+    const replacement = await createAttachableMedia(storyId, "VIDEO");
+    const attachment = await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: original.id, sortOrder: 0 },
+    });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/stories/${storyId}/media/${attachment.id}`,
+      cookies: cookie,
+      payload: { mediaAssetId: replacement.id },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(
+      await prisma.storyMedia.findUniqueOrThrow({
+        where: { id: attachment.id },
+        select: { mediaAssetId: true },
+      }),
+    ).toEqual({ mediaAssetId: original.id });
+    expect(cloudinaryMock.api.delete_resources).not.toHaveBeenCalled();
+  });
+
+  it("keeps a completed replacement when old-file cleanup fails", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const original = await createAttachableMedia(storyId);
+    const replacement = await createAttachableMedia(storyId);
+    const attachment = await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: original.id, sortOrder: 0 },
+    });
+    cloudinaryMock.api.delete_resources.mockResolvedValueOnce({
+      deleted: { [original.storageKey]: "error" },
+    });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/stories/${storyId}/media/${attachment.id}`,
+      cookies: cookie,
+      payload: { mediaAssetId: replacement.id },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      success: true,
+      cleanupWarning: true,
+    });
+    expect(
+      await prisma.storyMedia.findUniqueOrThrow({
+        where: { id: attachment.id },
+        select: { mediaAssetId: true },
+      }),
+    ).toEqual({ mediaAssetId: replacement.id });
+    expect(await prisma.mediaAsset.findUnique({ where: { id: original.id } })).not.toBeNull();
+  });
+
   it("deletes a removed video using the video resource type", async () => {
     const { cookie } = await registerAndLogin(app);
     const draft = await createDraft(cookie);

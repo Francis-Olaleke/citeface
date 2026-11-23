@@ -317,6 +317,185 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
       });
     },
   );
+  app.put<{
+    Params: { id: string; attachmentId: string };
+    Body: { mediaAssetId: string };
+  }>(
+    "/:id/media/:attachmentId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id", "attachmentId"],
+          additionalProperties: false,
+          properties: {
+            id: { type: "string", format: "uuid" },
+            attachmentId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["mediaAssetId"],
+          additionalProperties: false,
+          properties: {
+            mediaAssetId: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+      if (!token) {
+        return reply.code(401).send({ error: "Authentication required" });
+      }
+
+      const user = await getSessionUser(token);
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({ error: "Invalid or expired session" });
+      }
+
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          const draft = await tx.researchStory.findFirst({
+            where: {
+              id: request.params.id,
+              creatorId: user.id,
+              status: "DRAFT",
+              deletedAt: null,
+              publishedAt: null,
+            },
+            select: { id: true },
+          });
+          if (!draft) return { kind: "DRAFT_NOT_FOUND" as const };
+
+          const current = await tx.storyMedia.findFirst({
+            where: {
+              id: request.params.attachmentId,
+              storyId: draft.id,
+              media: {
+                uploadedById: user.id,
+                deletedAt: null,
+                storageProvider: "cloudinary",
+              },
+            },
+            select: {
+              id: true,
+              sortOrder: true,
+              caption: true,
+              media: {
+                select: {
+                  id: true,
+                  type: true,
+                  storageKey: true,
+                },
+              },
+            },
+          });
+          if (!current) return { kind: "ATTACHMENT_NOT_FOUND" as const };
+
+          const replacement = await tx.mediaAsset.findFirst({
+            where: {
+              id: request.body.mediaAssetId,
+              uploadedById: user.id,
+              storageProvider: "cloudinary",
+              deletedAt: null,
+              processingStatus: { in: ["READY", "PROCESSING"] },
+            },
+            select: {
+              id: true,
+              type: true,
+            },
+          });
+          if (!replacement) return { kind: "MEDIA_NOT_FOUND" as const };
+          if (current.media.type !== replacement.type) {
+            return { kind: "MEDIA_TYPE_MISMATCH" as const };
+          }
+          if (current.media.id === replacement.id) {
+            return { kind: "SAME_MEDIA" as const };
+          }
+
+          const duplicate = await tx.storyMedia.findFirst({
+            where: {
+              storyId: draft.id,
+              mediaAssetId: replacement.id,
+            },
+            select: { id: true },
+          });
+          if (duplicate) return { kind: "MEDIA_ALREADY_ATTACHED" as const };
+
+          const currentReferences = await tx.storyMedia.count({
+            where: { mediaAssetId: current.media.id },
+          });
+          if (current.media.type !== "IMAGE" && current.media.type !== "VIDEO") {
+            return { kind: "UNSUPPORTED_MEDIA" as const };
+          }
+
+          await tx.storyMedia.update({
+            where: { id: current.id },
+            data: { mediaAssetId: replacement.id },
+          });
+
+          return {
+            kind: "REPLACED" as const,
+            sortOrder: current.sortOrder,
+            caption: current.caption,
+            oldMediaId: current.media.id,
+            oldStorageKey: current.media.storageKey,
+            oldMediaType: current.media.type,
+            currentReferences,
+          };
+        });
+
+        switch (result.kind) {
+          case "DRAFT_NOT_FOUND":
+          case "ATTACHMENT_NOT_FOUND":
+            return reply.code(404).send({ error: "Draft media not found" });
+          case "MEDIA_NOT_FOUND":
+            return reply.code(404).send({ error: "Replacement media not found or not ready" });
+          case "MEDIA_TYPE_MISMATCH":
+            return reply.code(409).send({ error: "Replacement media must have the same type" });
+          case "SAME_MEDIA":
+            return reply.code(409).send({ error: "Choose a different media file to replace this attachment" });
+          case "MEDIA_ALREADY_ATTACHED":
+            return reply.code(409).send({ error: "This media is already attached to the draft" });
+          case "UNSUPPORTED_MEDIA":
+            return reply.code(409).send({ error: "This media cannot be replaced here" });
+          case "REPLACED": {
+            let cleanupWarning = false;
+            if (result.currentReferences === 1) {
+              try {
+                await deleteCloudinaryStoryMedia(
+                  result.oldStorageKey,
+                  result.oldMediaType,
+                );
+                await prisma.mediaAsset.delete({
+                  where: { id: result.oldMediaId },
+                });
+              } catch (error) {
+                cleanupWarning = true;
+                request.log.error(
+                  { err: error, mediaId: result.oldMediaId },
+                  "Replaced draft media could not be fully cleaned up.",
+                );
+              }
+            }
+            return reply.send({
+              success: true,
+              sortOrder: result.sortOrder,
+              caption: result.caption,
+              cleanupWarning,
+            });
+          }
+        }
+      } catch (error) {
+        request.log.error({ err: error }, "Draft media replacement failed.");
+        return reply.code(503).send({
+          error: "Could not replace this media right now. Please try again.",
+        });
+      }
+    },
+  );
   app.delete<{
     Params: { id: string; attachmentId: string };
   }>(
