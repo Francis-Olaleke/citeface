@@ -3,7 +3,10 @@ import type { FastifyPluginAsync } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../../plugins/database.js";
 import { getSessionUser } from "../auth/auth.service.js";
-import { getMediaDeliveryUrl } from "../media/media.service.js";
+import {
+  deleteCloudinaryStoryMedia,
+  getMediaDeliveryUrl,
+} from "../media/media.service.js";
 
 type ResearchClassification =
   | "PEER_REVIEWED_ARTICLE"
@@ -272,6 +275,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
               width: true,
               height: true,
               durationSeconds: true,
+              storageKey: true,
               processingStatus: true,
               processingErrorCode: true,
               createdAt: true,
@@ -296,11 +300,146 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
             durationSeconds: attachment.media.durationSeconds,
             status: attachment.media.processingStatus,
             errorCode: attachment.media.processingErrorCode,
+            deliveryUrl:
+              attachment.media.processingStatus === "READY" &&
+              (attachment.media.type === "IMAGE" ||
+                attachment.media.type === "VIDEO")
+                ? getMediaDeliveryUrl(
+                    attachment.media.storageKey,
+                    attachment.media.type,
+                    attachment.media.mimeType,
+                  )
+                : null,
             createdAt: attachment.media.createdAt,
             processedAt: attachment.media.processedAt,
           },
         })),
       });
+    },
+  );
+  app.delete<{
+    Params: { id: string; attachmentId: string };
+  }>(
+    "/:id/media/:attachmentId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id", "attachmentId"],
+          additionalProperties: false,
+          properties: {
+            id: { type: "string", format: "uuid" },
+            attachmentId: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({ error: "Authentication required" });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({ error: "Invalid or expired session" });
+      }
+
+      let result: { kind: "DRAFT_NOT_FOUND" | "ATTACHMENT_NOT_FOUND" | "UNSUPPORTED_MEDIA" | "REMOVED" };
+      try {
+        result = await prisma.$transaction(async (tx) => {
+          const draft = await tx.researchStory.findFirst({
+            where: {
+              id: request.params.id,
+              creatorId: user.id,
+              status: "DRAFT",
+              deletedAt: null,
+              publishedAt: null,
+            },
+            select: { id: true },
+          });
+
+          if (!draft) return { kind: "DRAFT_NOT_FOUND" as const };
+
+          const attachment = await tx.storyMedia.findFirst({
+            where: {
+              id: request.params.attachmentId,
+              storyId: draft.id,
+              media: {
+                uploadedById: user.id,
+                deletedAt: null,
+                storageProvider: "cloudinary",
+              },
+            },
+            select: {
+              id: true,
+              sortOrder: true,
+              media: {
+                select: {
+                  id: true,
+                  type: true,
+                  storageKey: true,
+                },
+              },
+            },
+          });
+
+          if (!attachment) return { kind: "ATTACHMENT_NOT_FOUND" as const };
+          if (attachment.media.type !== "IMAGE" && attachment.media.type !== "VIDEO") {
+            return { kind: "UNSUPPORTED_MEDIA" as const };
+          }
+
+          const assetAttachmentCount = await tx.storyMedia.count({
+            where: { mediaAssetId: attachment.media.id },
+          });
+          if (assetAttachmentCount === 1) {
+            await deleteCloudinaryStoryMedia(
+              attachment.media.storageKey,
+              attachment.media.type,
+            );
+          }
+
+          await tx.storyMedia.delete({ where: { id: attachment.id } });
+          if (assetAttachmentCount === 1) {
+            await tx.mediaAsset.delete({ where: { id: attachment.media.id } });
+          }
+
+          const remaining = await tx.storyMedia.findMany({
+            where: { storyId: draft.id },
+            orderBy: { sortOrder: "asc" },
+            select: { id: true, sortOrder: true },
+          });
+
+          for (const [sortOrder, item] of remaining.entries()) {
+            if (item.sortOrder !== sortOrder) {
+              await tx.storyMedia.update({
+                where: { id: item.id },
+                data: { sortOrder },
+              });
+            }
+          }
+
+          return { kind: "REMOVED" as const };
+        });
+      } catch (error) {
+        request.log.error({ err: error }, "Draft media removal failed.");
+        return reply.code(503).send({
+          error: "Could not remove this media right now. Please try again.",
+        });
+      }
+
+      if (result.kind === "DRAFT_NOT_FOUND" ||
+          result.kind === "ATTACHMENT_NOT_FOUND") {
+        return reply.code(404).send({ error: "Draft media not found" });
+      }
+      if (result.kind === "UNSUPPORTED_MEDIA") {
+        return reply.code(409).send({ error: "This media cannot be removed here" });
+      }
+
+      return reply.send({ success: true });
     },
   );
       // Attach an owned, validated media asset to an owned research draft.

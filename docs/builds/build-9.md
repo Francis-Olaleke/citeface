@@ -31,8 +31,19 @@ processing, preview, publication, and playback.
 **References:** [publishing specification](../product/publishing-specification.md),
 [media service](../../apps/api/src/modules/media/media.service.ts).
 
+## Increment gates
+
+| Increment | Scope | Gate |
+|---|---|---|
+| 9.1 - Upload infrastructure | Cloudinary connection, image upload, attachment registration | Product owner reports image upload, attachment registration, and `READY` status verified |
+| 9.2 - Media preview and management | Actual image and video previews in the composer, understandable processing states, attachment removal | Owners can preview ready media, see pending/processing/ready/failed state, and remove an attachment safely |
+| 9.3 - Video upload and processing | MP4 upload, server-side duration/metadata validation, processing callbacks, thumbnail/rendition readiness | Valid 90-300 second video reaches `READY`; failed or invalid video cannot publish |
+| 9.4 - Playback | Responsive video player, controls, accessible labels/captions | Ready video plays on supported desktop/mobile browsers without autoplay |
+| 9.5 - Reliability and security | Retry/recovery, authorization, upload limits, privacy, publication gate | Owner-only draft media, validated upload limits, and ready-media publication checks pass |
+| 9.6 - Build acceptance | Focused automated tests and real browser verification | Automated gates pass and image/video journeys are verified in a browser with provider configuration |
+
 ## Copilot execution prompt
 
 ```text
-Execute Build 9 in Milestone M2 - Publishing. Confirm Build 8's private-draft gate. Inspect the complete browser/API/Cloudinary flow and existing media tests; preserve private authenticated assets. Implement image/video selection, progress, processing, retry/removal, accessible preview/playback, and safe signed delivery. Enforce the approved size/type and 90-300 second video limits from trusted server metadata. Verify required provider/webhook configuration without reading or printing secrets. Add failure, privacy, and ready-state tests; report real-provider blockers and M2 evidence.
+Execute Build 9 in Milestone M2 - Publishing, following increments 9.1 through 9.6 in order. Treat 9.1 as verified only to the extent reported by the product owner. For 9.2, support actual previews for both images and videos, clear upload/processing/ready/failed states, and owner-authorized attachment removal. Then complete video processing (9.3), responsive accessible playback (9.4), reliability/security (9.5), and automated plus real-browser acceptance (9.6). Confirm Build 8's private-draft gate; inspect the full browser/API/Cloudinary flow and tests, preserve authenticated private media, and enforce trusted server-side type, size, duration, and publication checks. Do not print secrets. Report each increment's exact evidence and blockers separately.
 ```

@@ -253,6 +253,30 @@ export function getMediaDeliveryUrl(
   });
 }
 
+export async function deleteCloudinaryStoryMedia(
+  storageKey: string,
+  type: "IMAGE" | "VIDEO",
+) {
+  getCloudinaryConfig();
+
+  if (!storageKey.startsWith("citeface/story-media/")) {
+    throw new Error("Refusing to delete media outside the story-media namespace.");
+  }
+
+  const resourceType = type === "VIDEO" ? "video" : "image";
+  const response = await cloudinary.api.delete_resources([storageKey], {
+    resource_type: resourceType,
+    type: "authenticated",
+    invalidate: true,
+  }) as { deleted?: Record<string, string> };
+
+  const result = response.deleted?.[storageKey];
+
+  if (result !== "deleted" && result !== "not_found") {
+    throw new Error("Cloudinary did not confirm media deletion.");
+  }
+}
+
 export async function getMediaUploadStatus(
   userId: string,
   mediaId: string,

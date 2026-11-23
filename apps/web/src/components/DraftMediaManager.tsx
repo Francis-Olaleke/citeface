@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getDraftMedia,
+  removeDraftMedia,
   uploadMedia,
   StoryMediaError,
   type DraftMediaAttachment,
@@ -22,15 +23,19 @@ export default function DraftMediaManager({
   const [caption, setCaption] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [previewErrors, setPreviewErrors] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function refresh() {
-    setLoading(true);
+  async function refresh(showLoading = true) {
+    if (showLoading) setLoading(true);
     setError("");
 
     try {
       setAttachments(await getDraftMedia(draftId));
+      setPreviewErrors({});
     } catch (err) {
       setError(
         err instanceof Error
@@ -45,6 +50,20 @@ export default function DraftMediaManager({
   useEffect(() => {
     void refresh();
   }, [draftId]);
+
+  useEffect(() => {
+    const hasPendingMedia = attachments.some((item) =>
+      ["PENDING_UPLOAD", "UPLOADING", "PROCESSING"].includes(item.media.status),
+    );
+
+    if (!hasPendingMedia || uploading) return;
+
+    const intervalId = window.setInterval(() => {
+      void refresh(false);
+    }, 4000);
+
+    return () => window.clearInterval(intervalId);
+  }, [attachments, draftId, uploading]);
 
   const mediaType = attachments.find(
     (item) => item.media.status !== "FAILED"
@@ -130,6 +149,48 @@ export default function DraftMediaManager({
     }
   }
 
+  async function handleRemove(attachment: DraftMediaAttachment) {
+    setError("");
+    setMessage("");
+    setRemovingId(attachment.id);
+
+    try {
+      await removeDraftMedia(draftId, attachment.id);
+      setAttachments((current) =>
+        current
+          .filter((item) => item.id !== attachment.id)
+          .map((item, index) => ({ ...item, sortOrder: index })),
+      );
+      setConfirmRemoveId(null);
+      setMessage("Media removed from this draft.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not remove this media. Please try again.",
+      );
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  function getStatusLabel(status: string) {
+    switch (status) {
+      case "PENDING_UPLOAD":
+        return "Waiting for upload";
+      case "UPLOADING":
+        return "Uploading";
+      case "PROCESSING":
+        return "Processing";
+      case "READY":
+        return "Ready to publish";
+      case "FAILED":
+        return "Processing failed";
+      default:
+        return status.replaceAll("_", " ").toLowerCase();
+    }
+  }
+
   return (
     <section className="draft-media-manager">
       <div className="draft-media-heading">
@@ -170,7 +231,9 @@ export default function DraftMediaManager({
           onChange={(event) => void handleUpload(event)}
           disabled={uploading || hasVideo || imageCount >= 10}
         />
-        {uploading && <span>Uploading media...</span>}
+        {uploading && (
+          <span role="status">Uploading media to secure storage...</span>
+        )}
       </div>
 
       {error && (
@@ -193,29 +256,120 @@ export default function DraftMediaManager({
         </p>
       ) : (
         <ul className="draft-media-list">
-          {attachments.map((attachment) => (
-            <li key={attachment.id}>
-              <div>
-                <strong>
-                  {attachment.media.type === "VIDEO" ? "Video" : "Image"}{" "}
-                  {attachment.sortOrder + 1}
-                </strong>
-                {attachment.caption && <p>{attachment.caption}</p>}
-                <small>
-                  {attachment.media.mimeType} ·{" "}
-                  {attachment.media.status}
-                  {attachment.media.durationSeconds
-                    ? ` · ${attachment.media.durationSeconds}s`
-                    : ""}
-                </small>
-                {attachment.media.errorCode && (
-                  <small className="draft-media-error">
-                    {attachment.media.errorCode}
-                  </small>
+          {attachments.map((attachment) => {
+            const isReady = attachment.media.status === "READY";
+
+            return (
+              <li key={attachment.id}>
+                {isReady &&
+                  attachment.media.deliveryUrl &&
+                  !previewErrors[attachment.id] && (
+                  attachment.media.type === "VIDEO" ? (
+                    <video
+                      className="draft-media-preview"
+                      src={attachment.media.deliveryUrl}
+                      controls
+                      preload="metadata"
+                      aria-label={attachment.caption || "Draft research video"}
+                      onError={() =>
+                        setPreviewErrors((current) => ({
+                          ...current,
+                          [attachment.id]: true,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <img
+                      className="draft-media-preview"
+                      src={attachment.media.deliveryUrl}
+                      alt={attachment.caption || "Draft research image"}
+                      onError={() =>
+                        setPreviewErrors((current) => ({
+                          ...current,
+                          [attachment.id]: true,
+                        }))
+                      }
+                    />
+                  )
                 )}
-              </div>
-            </li>
-          ))}
+
+                <div className="draft-media-details">
+                  <div className="draft-media-title">
+                    <strong>
+                      {attachment.media.type === "VIDEO" ? "Video" : "Image"}{" "}
+                      {attachment.sortOrder + 1}
+                    </strong>
+                    <span
+                      className={`draft-media-status draft-media-status-${attachment.media.status.toLowerCase()}`}
+                      role="status"
+                    >
+                      {getStatusLabel(attachment.media.status)}
+                    </span>
+                  </div>
+                  {attachment.caption && <p>{attachment.caption}</p>}
+                  <small>
+                    {attachment.media.mimeType}
+                    {attachment.media.width && attachment.media.height
+                      ? ` · ${attachment.media.width} × ${attachment.media.height}`
+                      : ""}
+                    {attachment.media.durationSeconds
+                      ? ` · ${attachment.media.durationSeconds}s`
+                      : ""}
+                  </small>
+                  {!isReady && ["PENDING_UPLOAD", "UPLOADING", "PROCESSING"].includes(attachment.media.status) && (
+                    <p className="draft-media-processing">
+                      {attachment.media.status === "PROCESSING"
+                        ? "Your media is being prepared. This list updates automatically."
+                        : "Upload is in progress."}
+                    </p>
+                  )}
+                  {attachment.media.errorCode && (
+                    <p className="draft-media-error" role="alert">
+                      {attachment.media.errorCode}. Remove this attachment and
+                      upload it again.
+                    </p>
+                  )}
+                  {isReady &&
+                    (!attachment.media.deliveryUrl ||
+                      previewErrors[attachment.id]) && (
+                      <p className="draft-media-error" role="status">
+                        The media is ready, but its preview could not be loaded.
+                        Refresh the attachment status or remove and upload it
+                        again.
+                      </p>
+                    )}
+                  {confirmRemoveId === attachment.id ? (
+                    <div className="draft-media-remove-confirm">
+                      <span>Remove this media from the draft?</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleRemove(attachment)}
+                        disabled={removingId === attachment.id}
+                      >
+                        {removingId === attachment.id ? "Removing..." : "Confirm remove"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRemoveId(null)}
+                        disabled={removingId === attachment.id}
+                      >
+                        Keep media
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="draft-media-remove"
+                      onClick={() => setConfirmRemoveId(attachment.id)}
+                      disabled={uploading || removingId !== null}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

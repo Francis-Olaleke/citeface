@@ -6,8 +6,25 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 import type { FastifyInstance } from "fastify";
+
+const cloudinaryMock = vi.hoisted(() => ({
+  config: vi.fn(),
+  url: vi.fn(),
+  api: {
+    delete_resources: vi.fn(),
+  },
+  utils: {
+    api_sign_request: vi.fn(),
+    verifyNotificationSignature: vi.fn(),
+  },
+}));
+
+vi.mock("cloudinary", () => ({
+  v2: cloudinaryMock,
+}));
 
 import { prisma } from "../src/plugins/database.js";
 import {
@@ -100,6 +117,22 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  process.env.CLOUDINARY_CLOUD_NAME = "citeface-test";
+  process.env.CLOUDINARY_API_KEY = "test-api-key";
+  process.env.CLOUDINARY_API_SECRET = "test-api-secret";
+  cloudinaryMock.url.mockImplementation(
+    (
+      publicId: string,
+      options: { resource_type: string; format: string },
+    ) =>
+      `https://res.cloudinary.com/citeface-test/${options.resource_type}/authenticated/signed/${publicId}.${options.format}`,
+  );
+  cloudinaryMock.api.delete_resources.mockImplementation(
+    async (publicIds: string[]) => ({
+      deleted: { [publicIds[0]]: "deleted" },
+    }),
+  );
+  cloudinaryMock.api.delete_resources.mockClear();
   await resetDb();
 });
 
@@ -1139,7 +1172,7 @@ describe("F-05.4 research story publishing", () => {
         uploadedById: story.creatorId,
         type,
         storageKey:
-          "story-attachment/" +
+          "citeface/story-media/story-attachment/" +
           story.creatorId +
           "/" +
           Date.now() +
@@ -1207,6 +1240,7 @@ describe("F-05.4 research story publishing", () => {
         id: firstMedia.id,
         type: "IMAGE",
         status: "READY",
+        deliveryUrl: expect.stringContaining("/image/authenticated/signed/"),
       },
     });
     expect(body.attachments[1]).toMatchObject({
@@ -1216,14 +1250,62 @@ describe("F-05.4 research story publishing", () => {
         id: secondMedia.id,
         type: "IMAGE",
         status: "READY",
+        deliveryUrl: expect.stringContaining("/image/authenticated/signed/"),
       },
     });
 
     const responseText = JSON.stringify(body);
-    expect(responseText).not.toContain(firstMedia.storageKey);
-    expect(responseText).not.toContain(secondMedia.storageKey);
+    expect(body.attachments[0].media).not.toHaveProperty("storageKey");
+    expect(body.attachments[1].media).not.toHaveProperty("storageKey");
     expect(responseText).not.toContain("storageProvider");
-    expect(responseText).not.toContain("cloudinary");
+  });
+
+  it("does not issue a preview URL until media is ready", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId, "IMAGE", "PROCESSING");
+
+    await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/stories/${storyId}/media`,
+      cookies: cookie,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().attachments[0].media).toMatchObject({
+      status: "PROCESSING",
+      deliveryUrl: null,
+    });
+  });
+
+  it("returns a playable signed preview for a ready video", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId, "VIDEO", "READY");
+
+    await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/stories/${storyId}/media`,
+      cookies: cookie,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().attachments[0].media).toMatchObject({
+      type: "VIDEO",
+      mimeType: "video/mp4",
+      status: "READY",
+      deliveryUrl: expect.stringContaining("/video/authenticated/signed/"),
+    });
   });
 
   it("does not expose another researcher's draft media", async () => {
@@ -1240,6 +1322,142 @@ describe("F-05.4 research story publishing", () => {
 
     expect(res.statusCode).toBe(404);
     expect(res.json().error).toBe("Research draft not found");
+  });
+
+  it("removes an owned draft attachment and reorders the remaining media", async () => {
+    const owner = await registerAndLogin(app, 31);
+    const other = await registerAndLogin(app, 32);
+    const draft = await createDraft(owner.cookie);
+    const storyId = draft.json().story.id;
+    const first = await createAttachableMedia(storyId);
+    const second = await createAttachableMedia(storyId);
+
+    const firstAttachment = await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: first.id, sortOrder: 0 },
+    });
+    await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: second.id, sortOrder: 1 },
+    });
+
+    const denied = await app.inject({
+      method: "DELETE",
+      url: `/stories/${storyId}/media/${firstAttachment.id}`,
+      cookies: other.cookie,
+    });
+    expect(denied.statusCode).toBe(404);
+    expect(await prisma.mediaAsset.findUnique({ where: { id: first.id } })).not.toBeNull();
+    expect(cloudinaryMock.api.delete_resources).not.toHaveBeenCalled();
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/stories/${storyId}/media/${firstAttachment.id}`,
+      cookies: owner.cookie,
+    });
+
+    expect(removed.statusCode).toBe(200);
+    expect(await prisma.mediaAsset.findUnique({ where: { id: first.id } })).toBeNull();
+    expect(await prisma.storyMedia.count({ where: { storyId } })).toBe(1);
+    expect(
+      await prisma.storyMedia.findFirstOrThrow({
+        where: { storyId },
+        select: { mediaAssetId: true, sortOrder: true },
+      }),
+    ).toEqual({ mediaAssetId: second.id, sortOrder: 0 });
+    expect(cloudinaryMock.api.delete_resources).toHaveBeenCalledWith(
+      [first.storageKey],
+      {
+        resource_type: "image",
+        type: "authenticated",
+        invalidate: true,
+      },
+    );
+  });
+
+  it("deletes a removed video using the video resource type", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId, "VIDEO");
+    const attachment = await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/stories/${storyId}/media/${attachment.id}`,
+      cookies: cookie,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(cloudinaryMock.api.delete_resources).toHaveBeenCalledWith(
+      [media.storageKey],
+      {
+        resource_type: "video",
+        type: "authenticated",
+        invalidate: true,
+      },
+    );
+    expect(await prisma.mediaAsset.findUnique({ where: { id: media.id } })).toBeNull();
+  });
+
+  it("keeps the attachment if the media provider cannot confirm removal", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId);
+    const attachment = await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+    cloudinaryMock.api.delete_resources.mockResolvedValueOnce({
+      deleted: { [media.storageKey]: "error" },
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/stories/${storyId}/media/${attachment.id}`,
+      cookies: cookie,
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(
+      await prisma.storyMedia.findUnique({ where: { id: attachment.id } }),
+    ).not.toBeNull();
+    expect(await prisma.mediaAsset.findUnique({ where: { id: media.id } })).not.toBeNull();
+  });
+
+  it("requires authentication to remove draft media", async () => {
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/stories/00000000-0000-4000-8000-000000000001/media/00000000-0000-4000-8000-000000000002",
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("retains a media asset that is still attached to another story", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const firstDraft = await createDraft(cookie);
+    const secondDraft = await createDraft(cookie);
+    const firstStoryId = firstDraft.json().story.id;
+    const secondStoryId = secondDraft.json().story.id;
+    const media = await createAttachableMedia(firstStoryId);
+
+    const firstAttachment = await prisma.storyMedia.create({
+      data: { storyId: firstStoryId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+    await prisma.storyMedia.create({
+      data: { storyId: secondStoryId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/stories/${firstStoryId}/media/${firstAttachment.id}`,
+      cookies: cookie,
+    });
+
+    expect(removed.statusCode).toBe(200);
+    expect(await prisma.mediaAsset.findUnique({ where: { id: media.id } })).not.toBeNull();
+    expect(cloudinaryMock.api.delete_resources).not.toHaveBeenCalled();
   });
 
   it("excludes deleted media from draft attachments", async () => {

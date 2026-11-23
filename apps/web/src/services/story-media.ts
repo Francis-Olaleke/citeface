@@ -33,6 +33,7 @@ export interface DraftMediaAttachment {
     durationSeconds: number | null;
     status: string;
     errorCode: string | null;
+    deliveryUrl: string | null;
     createdAt: string;
     processedAt: string | null;
   };
@@ -63,9 +64,9 @@ async function request<T>(
     credentials: "include",
     ...options,
     headers: {
-      ...(options.body instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
+      ...(options.body !== undefined && !(options.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...options.headers,
     },
   });
@@ -90,6 +91,16 @@ export async function getDraftMedia(
   }>(`/stories/${encodeURIComponent(storyId)}/media`);
 
   return result.attachments;
+}
+
+export async function removeDraftMedia(
+  storyId: string,
+  attachmentId: string,
+): Promise<void> {
+  await request(
+    `/stories/${encodeURIComponent(storyId)}/media/${encodeURIComponent(attachmentId)}`,
+    { method: "DELETE" },
+  );
 }
 
 export async function createUploadIntent(file: File) {
