@@ -666,7 +666,11 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 Messages
               </button>
 
-              <button className="nav-item" type="button" disabled>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() => navigate("/saved")}
+              >
                 <span className="nav-symbol"><NavIcon name="saved" /></span>
                 Saved
               </button>
@@ -702,7 +706,11 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 Mentorship
               </button>
 
-              <button className="nav-item" type="button" disabled>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() => navigate("/opportunities")}
+              >
                 <span className="nav-symbol"><NavIcon name="opportunities" /></span>
                 Opportunities
               </button>

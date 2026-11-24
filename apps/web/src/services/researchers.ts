@@ -17,6 +17,10 @@ export interface ResearcherProfileData {
     specializations: string[];
     education: Array<{ institution?: string; degree?: string; year?: string }>;
     institutionAffiliations: Array<{ institution?: string; role?: string; startYear?: string; endYear?: string }>;
+    careerStage: string | null;
+    professionalRanks: string[];
+    researchInterests: string[];
+    researchGoal: string | null;
     grants: Array<{ title?: string; funder?: string; year?: string }>;
     fellowships: Array<{ title?: string; organization?: string; year?: string }>;
     professionalBodies: Array<{ name?: string; role?: string }>;
@@ -237,6 +241,10 @@ export interface CredibilityProfilePayload {
   specializations?: string[];
   education?: Array<{ institution?: string; degree?: string; year?: string }>;
   institutionAffiliations?: Array<{ institution?: string; role?: string; startYear?: string; endYear?: string }>;
+  careerStage?: string;
+  professionalRanks?: string[];
+  researchInterests?: string[];
+  researchGoal?: string;
   grants?: Array<{ title?: string; funder?: string; year?: string }>;
   fellowships?: Array<{ title?: string; organization?: string; year?: string }>;
   professionalBodies?: Array<{ name?: string; role?: string }>;

@@ -1245,6 +1245,117 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
   );
 
   // F-05.2: List the authenticated user's private drafts.
+  app.get("/saved", async (request, reply) => {
+    const token = request.cookies.citeface_session;
+    if (!token) return reply.code(401).send({ error: "Authentication required" });
+    const user = await getSessionUser(token);
+    if (!user) {
+      reply.clearCookie("citeface_session", { path: "/" });
+      return reply.code(401).send({ error: "Your session is invalid or has expired" });
+    }
+
+    const saved = await prisma.savedItem.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        story: {
+          include: {
+            creator: {
+              select: {
+                id: true,
+                displayName: true,
+                username: true,
+                researcherProfile: {
+                  select: { headline: true, profileImageUrl: true, isVerified: true },
+                },
+              },
+            },
+            topics: { include: { topic: true } },
+          },
+        },
+      },
+    });
+
+    return reply.send({
+      stories: saved
+        .map((item) => item.story)
+        .filter((story) =>
+          story.status === "PUBLISHED" &&
+          story.deletedAt === null &&
+          story.publishedAt !== null &&
+          story.retractedAt === null,
+        ),
+    });
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/:id/save",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: { id: { type: "string", format: "uuid" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+      if (!token) return reply.code(401).send({ error: "Authentication required" });
+      const user = await getSessionUser(token);
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({ error: "Your session is invalid or has expired" });
+      }
+
+      const story = await prisma.researchStory.findFirst({
+        where: {
+          id: request.params.id,
+          status: "PUBLISHED",
+          deletedAt: null,
+          publishedAt: { not: null },
+        },
+        select: { id: true },
+      });
+      if (!story) return reply.code(404).send({ error: "Research story not found" });
+
+      await prisma.savedItem.upsert({
+        where: { userId_storyId: { userId: user.id, storyId: story.id } },
+        create: { userId: user.id, storyId: story.id },
+        update: {},
+      });
+      return reply.send({ saved: true });
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/:id/save",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: { id: { type: "string", format: "uuid" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+      if (!token) return reply.code(401).send({ error: "Authentication required" });
+      const user = await getSessionUser(token);
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({ error: "Your session is invalid or has expired" });
+      }
+      await prisma.savedItem.deleteMany({
+        where: { userId: user.id, storyId: request.params.id },
+      });
+      return reply.send({ saved: false });
+    },
+  );
+
   app.get("/drafts", async (request, reply) => {
     const token = request.cookies.citeface_session;
 

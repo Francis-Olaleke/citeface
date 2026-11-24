@@ -588,3 +588,32 @@ export async function deletePublishedStory(id: string): Promise<void> {
     );
   }
 }
+
+export async function getSavedStories(): Promise<{ stories: FeedStory[] }> {
+  const response = await fetch(`${API_URL}/saved`, {
+    method: "GET",
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new StoriesServiceError(
+      typeof data.message === "string" ? data.message : "Unable to load saved research.",
+      response.status,
+    );
+  }
+  return data as unknown as { stories: FeedStory[] };
+}
+
+export async function setStorySaved(storyId: string, saved: boolean): Promise<void> {
+  const response = await fetch(`${API_URL}/${encodeURIComponent(storyId)}/save`, {
+    method: saved ? "POST" : "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new StoriesServiceError(
+      typeof data.message === "string" ? data.message : "Unable to update saved research.",
+      response.status,
+    );
+  }
+}

@@ -74,17 +74,88 @@ function ResearchDraftEditor({
 
 
   useEffect(() => {
-    setTitle(draft.title);
-    setSummary(draft.summary);
-    setClassification(draft.classification);
-    setResearchQuestion(draft.researchQuestion ?? "");
-    setMethodology(draft.methodology ?? "");
-    setFindings(draft.findings ?? "");
-    setSignificance(draft.significance ?? "");
-    setLimitations(draft.limitations ?? "");
+    let stored: Partial<{
+      title: string;
+      summary: string;
+      classification: string;
+      researchQuestion: string;
+      methodology: string;
+      findings: string;
+      significance: string;
+      limitations: string;
+    }> = {};
+    try {
+      const raw = localStorage.getItem(`citeface:draft:${draft.id}`);
+      if (raw) stored = JSON.parse(raw);
+    } catch {
+      stored = {};
+    }
+
+    setTitle(stored.title ?? draft.title);
+    setSummary(stored.summary ?? draft.summary);
+    setClassification(stored.classification ?? draft.classification);
+    setResearchQuestion(stored.researchQuestion ?? draft.researchQuestion ?? "");
+    setMethodology(stored.methodology ?? draft.methodology ?? "");
+    setFindings(stored.findings ?? draft.findings ?? "");
+    setSignificance(stored.significance ?? draft.significance ?? "");
+    setLimitations(stored.limitations ?? draft.limitations ?? "");
     setError("");
 
   }, [draft.id, draft.updatedAt]);
+
+  const draftContent = {
+    title,
+    summary,
+    classification,
+    researchQuestion,
+    methodology,
+    findings,
+    significance,
+    limitations,
+  };
+
+  useEffect(() => {
+    if (!title.trim() || !summary.trim()) return;
+    localStorage.setItem(
+      `citeface:draft:${draft.id}`,
+      JSON.stringify(draftContent),
+    );
+
+    const timer = window.setTimeout(() => {
+      void updateStoryDraft(draft.id, {
+        title: title.trim(),
+        summary: summary.trim(),
+        classification,
+        researchQuestion: researchQuestion.trim() || null,
+        methodology: methodology.trim() || null,
+        findings: findings.trim() || null,
+        significance: significance.trim() || null,
+        limitations: limitations.trim() || null,
+        changeNote: "Autosaved from the Citeface research editor",
+      }).then((result) => {
+        localStorage.removeItem(`citeface:draft:${draft.id}`);
+        onSaved(result.story);
+      }).catch((saveError) => {
+        setError(
+          saveError instanceof Error
+            ? saveError.message
+            : "Unable to autosave your draft.",
+        );
+      });
+    }, 1500);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    draft.id,
+    title,
+    summary,
+    classification,
+    researchQuestion,
+    methodology,
+    findings,
+    significance,
+    limitations,
+  ]);
 
   const hasChanges =
     title.trim() !== draft.title ||

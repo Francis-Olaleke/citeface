@@ -53,6 +53,10 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
       specializations?: string[];
       education?: Array<Record<string, unknown>>;
       institutionAffiliations?: Array<Record<string, unknown>>;
+      careerStage?: string;
+      professionalRanks?: string[];
+      researchInterests?: string[];
+      researchGoal?: string;
       grants?: Array<Record<string, unknown>>;
       fellowships?: Array<Record<string, unknown>>;
       professionalBodies?: Array<Record<string, unknown>>;
@@ -77,6 +81,10 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
             specializations: { type: "array", maxItems: 30, items: { type: "string", maxLength: 100 } },
             education: { type: "array", maxItems: 20, items: { type: "object" } },
             institutionAffiliations: { type: "array", maxItems: 30, items: { type: "object" } },
+            careerStage: { type: "string", maxLength: 50 },
+            professionalRanks: { type: "array", maxItems: 30, items: { type: "string", maxLength: 100 } },
+            researchInterests: { type: "array", maxItems: 30, items: { type: "string", maxLength: 100 } },
+            researchGoal: { type: "string", maxLength: 3000 },
             grants: { type: "array", maxItems: 50, items: { type: "object" } },
             fellowships: { type: "array", maxItems: 50, items: { type: "object" } },
             professionalBodies: { type: "array", maxItems: 50, items: { type: "object" } },
@@ -110,6 +118,10 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
           specializations: body.specializations ?? [],
           education: body.education ?? [],
           institutionAffiliations: body.institutionAffiliations ?? [],
+          careerStage: body.careerStage?.trim() || null,
+          professionalRanks: body.professionalRanks ?? [],
+          researchInterests: body.researchInterests ?? [],
+          researchGoal: body.researchGoal?.trim() || null,
           grants: body.grants ?? [],
           fellowships: body.fellowships ?? [],
           professionalBodies: body.professionalBodies ?? [],
@@ -127,6 +139,10 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
           specializations: body.specializations ?? [],
           education: body.education ?? [],
           institutionAffiliations: body.institutionAffiliations ?? [],
+          careerStage: body.careerStage?.trim() || null,
+          professionalRanks: body.professionalRanks ?? [],
+          researchInterests: body.researchInterests ?? [],
+          researchGoal: body.researchGoal?.trim() || null,
           grants: body.grants ?? [],
           fellowships: body.fellowships ?? [],
           professionalBodies: body.professionalBodies ?? [],
@@ -588,6 +604,10 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
               specializations: true,
               education: true,
               institutionAffiliations: true,
+              careerStage: true,
+              professionalRanks: true,
+              researchInterests: true,
+              researchGoal: true,
               grants: true,
               fellowships: true,
               professionalBodies: true,

@@ -49,3 +49,26 @@ export async function joinCommunity(slug: string) {
   if (!response.ok) throw new Error(message(data, "Unable to join this community."));
   return data;
 }
+
+export async function getCommunity(slug: string): Promise<{ community: CommunitySummary & {
+  posts: Array<{ id: string; body: string; createdAt: string; author: { id: string; username: string; displayName: string } }>;
+} }> {
+  const response = await fetch(`/api/communities/${encodeURIComponent(slug)}`, { credentials: "include" });
+  const data = await read(response);
+  if (!response.ok) throw new Error(message(data, "Unable to load this community."));
+  return data as { community: CommunitySummary & {
+    posts: Array<{ id: string; body: string; createdAt: string; author: { id: string; username: string; displayName: string } }>;
+  } };
+}
+
+export async function createCommunityPost(slug: string, body: string) {
+  const response = await fetch(`/api/communities/${encodeURIComponent(slug)}/posts`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body }),
+  });
+  const data = await read(response);
+  if (!response.ok) throw new Error(message(data, "Unable to publish in this community."));
+  return data.post;
+}

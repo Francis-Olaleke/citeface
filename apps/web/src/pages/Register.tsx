@@ -35,7 +35,7 @@ function Register() {
         password,
       });
 
-      navigate("/dashboard", { replace: true });
+      navigate("/profile/edit", { replace: true });
     } catch (err) {
       setError(
         err instanceof Error

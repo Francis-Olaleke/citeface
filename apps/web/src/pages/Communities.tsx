@@ -124,6 +124,7 @@ export default function Communities() {
                 </div>
                 <div className="community-actions">
                   <button type="button" disabled={busy} onClick={() => void handleJoin(community.slug)}>Join</button>
+                  <Link className="community-open" to={`/communities/${encodeURIComponent(community.slug)}`}>Open</Link>
                 </div>
               </article>
             ))}

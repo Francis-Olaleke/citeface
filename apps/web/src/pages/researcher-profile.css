@@ -154,6 +154,20 @@
   margin: 18px 28px 0 160px;
 }
 
+.researcher-edit-profile {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--cf-blue);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--cf-blue-dark);
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
 .researcher-follow-button {
   min-width: 94px;
   padding: 8px 14px;

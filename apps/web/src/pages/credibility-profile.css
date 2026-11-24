@@ -12,6 +12,13 @@
 .credibility-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .credibility-grid label, .credibility-section > label { display: grid; gap: 7px; color: #48566b; font-size: 12px; font-weight: 650; }
 .credibility-grid input, .credibility-grid textarea, .credibility-section > label textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe6ef; border-radius: 9px; font: inherit; resize: vertical; }
+.credibility-grid select { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe6ef; border-radius: 9px; background: #fff; font: inherit; }
+.credibility-choice-fieldset { margin-top: 16px; border: 0; padding: 0; }
+.credibility-choice-fieldset legend { margin-bottom: 9px; color: #48566b; font-size: 12px; font-weight: 650; }
+.credibility-choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.credibility-choice-grid label { display: flex !important; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e8edf4; border-radius: 8px; color: #596579; font-size: 12px; font-weight: 500; }
+.credibility-choice-grid input { width: auto; }
+.credibility-entry-level { margin-top: 4px; }
 .credibility-span { grid-column: 1 / -1; }
 .credibility-section small { color: #778195; font-size: 11px; font-weight: 400; }
 .credibility-save { justify-self: start; border: 0; border-radius: 9px; background: var(--cf-blue); color: #fff; padding: 12px 16px; font-weight: 650; cursor: pointer; }
@@ -20,4 +27,8 @@
 .credibility-error { background: #fff0f2; color: #a83246; }
 .credibility-success { background: #edf8f4; color: #087969; }
 .credibility-state { padding: 28px; border: 1px solid #e8edf4; border-radius: 14px; background: #fff; text-align: center; }
-@media (max-width: 720px) { .credibility-grid { grid-template-columns: 1fr; } .credibility-span { grid-column: auto; } }
+@media (max-width: 720px) {
+  .credibility-grid { grid-template-columns: 1fr; }
+  .credibility-span { grid-column: auto; }
+  .credibility-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

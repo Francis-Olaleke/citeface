@@ -25,6 +25,8 @@ import Messages from "./pages/Messages";
 import Mentorship from "./pages/Mentorship";
 import Communities from "./pages/Communities";
 import CredibilityProfile from "./pages/CredibilityProfile";
+import SavedResearch from "./pages/SavedResearch";
+import CommunityDetail from "./pages/CommunityDetail";
 import "./styles/design-system.css";
 import "./styles/notifications.css";
 import "./styles/brand-identity.css";
@@ -97,8 +99,11 @@ function App() {
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:conversationId" element={<Messages />} />
             <Route path="/mentorship" element={<Mentorship />} />
+            <Route path="/opportunities" element={<Mentorship />} />
             <Route path="/communities" element={<Communities />} />
+            <Route path="/communities/:slug" element={<CommunityDetail />} />
             <Route path="/profile/edit" element={<CredibilityProfile />} />
+            <Route path="/saved" element={<SavedResearch />} />
           </Route>
 
           <Route element={<ProtectedRoute />}>

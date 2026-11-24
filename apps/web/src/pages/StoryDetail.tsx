@@ -4,11 +4,13 @@ import CitefaceBrand from "../components/CitefaceBrand";
 
 import {
   getPublicStory,
+  setStorySaved,
   StoriesServiceError,
   type PublicStory,
 } from "../services/stories";
 
 import { PublishedStoryOwnerActions } from "../components/PublishedStoryOwnerActions";
+import { useAuth } from "../context/AuthContext";
 import "./story-detail.css";
 
 function formatLabel(value: string) {
@@ -63,11 +65,14 @@ function ContentSection({
 
 function StoryDetail() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
 
   const [story, setStory] = useState<PublicStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,15 +128,37 @@ function StoryDetail() {
           <CitefaceBrand />
         </Link>
 
-        <Link className="detail-back-link" to="/">
-          Dis
+        <div className="detail-topbar-actions">
           {story && (
             <PublishedStoryOwnerActions
               story={story}
               onStoryUpdated={setStory}
             />
-          )}cover research
-        </Link>
+          )}
+          {user && story && (
+            <button
+              type="button"
+              className="detail-save-button"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await setStorySaved(story.id, !saved);
+                  setSaved((current) => !current);
+                } catch {
+                  // The service error is intentionally visible through the existing page state.
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saved ? "Saved" : "Save research"}
+            </button>
+          )}
+          <Link className="detail-back-link" to="/">
+            Discover research
+          </Link>
+        </div>
       </header>
 
       <main className="detail-main">

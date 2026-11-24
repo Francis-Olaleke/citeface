@@ -4,6 +4,70 @@ import { prisma } from "../../plugins/database.js";
 import Stripe from "stripe";
 
 const mentorshipRoutes: FastifyPluginAsync = async (app) => {
+  app.post(
+    "/stripe/webhook",
+    {
+      config: { rawBody: true },
+    },
+    async (request, reply) => {
+      const secretKey = process.env.STRIPE_SECRET_KEY;
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!secretKey || !webhookSecret) {
+        return reply.code(503).send({ error: "Stripe webhook is not configured." });
+      }
+
+      const signature = request.headers["stripe-signature"];
+      if (typeof signature !== "string") {
+        return reply.code(400).send({ error: "Missing Stripe signature." });
+      }
+      const rawBody = (request as unknown as { rawBody?: Buffer }).rawBody;
+      if (!rawBody) {
+        return reply.code(400).send({ error: "Missing raw request body." });
+      }
+
+      let event: Stripe.Event;
+      try {
+        const stripe = new Stripe(secretKey);
+        event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+      } catch {
+        return reply.code(400).send({ error: "Invalid Stripe signature." });
+      }
+
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const requestId =
+          session.metadata?.citefaceMentorshipRequestId ??
+          session.client_reference_id;
+        if (requestId) {
+          await prisma.mentorshipRequest.updateMany({
+            where: { id: requestId },
+            data: {
+              paymentStatus: "PAID",
+              stripeCheckoutSessionId: session.id,
+              stripePaymentIntentId:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : null,
+            },
+          });
+        }
+      }
+
+      if (event.type === "account.updated") {
+        const account = event.data.object as Stripe.Account;
+        await prisma.researcherProfile.updateMany({
+          where: { stripeAccountId: account.id },
+          data: {
+            stripeOnboardingComplete:
+              Boolean(account.details_submitted) &&
+              Boolean(account.charges_enabled),
+          },
+        });
+      }
+
+      return reply.send({ received: true });
+    },
+  );
   app.get("/", async (_request, reply) => {
     const offerings = await prisma.mentorOffering.findMany({
       where: { isActive: true },

@@ -280,6 +280,14 @@ function ResearcherProfile() {
                     ORCID
                   </a>
                 )}
+                {user && user.username === researcher.username && (
+                  <Link
+                    className="researcher-edit-profile"
+                    to="/profile/edit"
+                  >
+                    Edit profile
+                  </Link>
+                )}
                 {user && user.username !== researcher.username && (
                   <button
                     type="button"
@@ -327,9 +335,45 @@ function ResearcherProfile() {
                   profile?.grants?.length ||
                   profile?.fellowships?.length ||
                   profile?.professionalBodies?.length ||
+                  profile?.careerStage ||
+                  profile?.professionalRanks?.length ||
+                  profile?.researchInterests?.length ||
+                  profile?.researchGoal?.trim() ||
                   profile?.citationCount) && (
                   <section className="researcher-panel">
                     <h2>Academic credentials</h2>
+                    {profile.careerStage && (
+                      <div className="researcher-credential-block">
+                        <h3>Career stage</h3>
+                        <p>{profile.careerStage}</p>
+                      </div>
+                    )}
+                    {profile.professionalRanks?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Professional qualifications and ranks</h3>
+                        <div className="researcher-credential-tags">
+                          {profile.professionalRanks.map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.researchInterests?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Research interests</h3>
+                        <div className="researcher-credential-tags">
+                          {profile.researchInterests.map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.researchGoal?.trim() && (
+                      <div className="researcher-credential-block">
+                        <h3>Research goal</h3>
+                        <p>{profile.researchGoal}</p>
+                      </div>
+                    )}
                     {profile.citationCount > 0 && (
                       <div className="researcher-credential-stat">
                         <strong>{profile.citationCount.toLocaleString()}</strong>

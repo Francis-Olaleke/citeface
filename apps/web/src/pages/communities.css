@@ -24,6 +24,8 @@
 .community-card p { margin: 0; flex: 1; color: #596579; font-size: 13px; line-height: 1.55; }
 .community-stats { display: flex; gap: 12px; margin: 12px 0; color: #778195; font-size: 12px; }
 .community-actions { display: flex; justify-content: flex-end; }
+.community-actions { gap: 8px; }
+.community-open { display: inline-flex; align-items: center; padding: 10px 14px; border: 1px solid #dfe6ef; border-radius: 9px; color: var(--cf-blue-dark); font-size: 12px; font-weight: 650; text-decoration: none; }
 .communities-state { padding: 28px; text-align: center; }
 .communities-state h2 { margin: 0 0 8px; }
 @media (max-width: 720px) { .community-grid { grid-template-columns: 1fr; } .communities-search div { flex-direction: column; } }
