@@ -80,6 +80,35 @@ function getTopicSuggestions(stories: FeedStory[]) {
     .slice(0, 8);
 }
 
+function getResearcherSpotlights(stories: FeedStory[]) {
+  const researchers = new Map<
+    string,
+    {
+      username: string;
+      displayName: string;
+      headline: string | null;
+      profileImageUrl: string | null;
+      isVerified: boolean;
+      publicationCount: number;
+    }
+  >();
+
+  for (const story of stories) {
+    const creator = story.creator;
+    const current = researchers.get(creator.username);
+    researchers.set(creator.username, {
+      username: creator.username,
+      displayName: creator.displayName,
+      headline: creator.researcherProfile?.headline ?? null,
+      profileImageUrl: creator.researcherProfile?.profileImageUrl ?? null,
+      isVerified: creator.researcherProfile?.isVerified ?? false,
+      publicationCount: (current?.publicationCount ?? 0) + 1,
+    });
+  }
+
+  return Array.from(researchers.values()).slice(0, 8);
+}
+
 type NavIconName =
   | "home"
   | "discover"
@@ -257,6 +286,12 @@ function StoryCard({ story }: { story: FeedStory }) {
         <span>
           ○ {formatCount(story._count.comments)} questions and comments
         </span>
+        <Link
+          className="story-open-link"
+          to={`/stories/${encodeURIComponent(story.slug)}`}
+        >
+          Read research <span aria-hidden="true">→</span>
+        </Link>
       </div>
     </article>
   );
@@ -300,6 +335,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   
   const initials = getInitials(user?.displayName ?? "C");
   const topicSuggestions = getTopicSuggestions(stories);
+  const researcherSpotlights = getResearcherSpotlights(stories);
 
   useEffect(() => {
     if (publicView || !draftId) {
@@ -627,7 +663,15 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 Saved
               </button>
 
-              <button className="nav-item" type="button" disabled>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("my-research-drafts")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
                 <span className="nav-symbol"><NavIcon name="research" /></span>
                 My Research
               </button>
@@ -674,10 +718,6 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 
 {!publicView && (
   <>
-    <MyDrafts
-  onOpenDraft={(draft) => navigate(`/dashboard/drafts/${draft.id}`)}
-  refreshKey={draftsRefreshKey}
-/>
           {draftId && draftLoading && !selectedDraft && (
             <p role="status">Opening your draft...</p>
           )}
@@ -788,6 +828,70 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 : "Latest stories"}
             </span>
           </div>
+
+          {!publicView && researcherSpotlights.length > 0 && (
+            <section
+              className="researcher-spotlights"
+              aria-labelledby="researcher-spotlights-heading"
+            >
+              <div className="researcher-spotlights-header">
+                <div>
+                  <span className="researcher-spotlights-kicker">
+                    PEOPLE BEHIND THE IDEAS
+                  </span>
+                  <h3 id="researcher-spotlights-heading">
+                    Researchers in the conversation
+                  </h3>
+                </div>
+                <span className="researcher-spotlights-count">
+                  {researcherSpotlights.length} in this feed
+                </span>
+              </div>
+              <div className="researcher-spotlights-list">
+                {researcherSpotlights.map((researcher) => (
+                  <Link
+                    className="researcher-spotlight"
+                    key={researcher.username}
+                    to={`/researchers/${encodeURIComponent(researcher.username)}`}
+                  >
+                    <span className="researcher-spotlight-avatar-ring">
+                      <span className="profile-avatar researcher-spotlight-avatar">
+                        {researcher.profileImageUrl ? (
+                          <img
+                            src={researcher.profileImageUrl}
+                            alt=""
+                            onError={(event) => event.currentTarget.remove()}
+                          />
+                        ) : (
+                          getInitials(researcher.displayName)
+                        )}
+                      </span>
+                    </span>
+                    <strong>
+                      {researcher.displayName}
+                      {researcher.isVerified && (
+                        <span
+                          className="verified-mark"
+                          aria-label="Verified researcher"
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </strong>
+                    <span className="researcher-spotlight-detail">
+                      {researcher.headline || `@${researcher.username}`}
+                    </span>
+                    <span className="researcher-spotlight-count">
+                      {researcher.publicationCount}{" "}
+                      {researcher.publicationCount === 1
+                        ? "story shown"
+                        : "stories shown"}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div className="discovery-filters">
             <label htmlFor="research-classification-filter">
@@ -928,6 +1032,21 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
               </button>
             </div>
           )}
+
+          {!publicView && (
+            <div id="my-research-drafts" className="my-research-drafts-anchor">
+              <MyDrafts
+                onOpenDraft={(draft) => navigate(`/dashboard/drafts/${draft.id}`)}
+                onDraftDeleted={(deletedDraftId) => {
+                  if (selectedDraft?.id === deletedDraftId) {
+                    setSelectedDraft(null);
+                    navigate("/dashboard", { replace: true });
+                  }
+                }}
+                refreshKey={draftsRefreshKey}
+              />
+            </div>
+          )}
         </main>
         
         {!publicView && (
@@ -936,20 +1055,25 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
               <h2 className="panel-heading">Your profile</h2>
 
               <div className="sidebar-profile">
-                <div className="profile-avatar">
-                  {user?.profileImageUrl ? (
-                    <img
-                      className="profile-avatar-image"
-                      src={user.profileImageUrl}
-                      alt=""
-                    />
-                  ) : initials}
-                </div>
+                <Link
+                  className="sidebar-profile-link"
+                  to={`/researchers/${encodeURIComponent(user?.username ?? "")}`}
+                >
+                  <div className="profile-avatar">
+                    {user?.profileImageUrl ? (
+                      <img
+                        className="profile-avatar-image"
+                        src={user.profileImageUrl}
+                        alt=""
+                      />
+                    ) : initials}
+                  </div>
 
-                <div>
-                  <strong>{user?.displayName}</strong>
-                  <small>@{user?.username}</small>
-                </div>
+                  <div>
+                    <strong>{user?.displayName}</strong>
+                    <small>@{user?.username}</small>
+                  </div>
+                </Link>
               </div>
 
               <div className="profile-email">{user?.email}</div>

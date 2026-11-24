@@ -10,9 +10,10 @@
   width: 43px;
   height: 43px;
   flex: 0 0 auto;
-  padding: 3px;
-  border-radius: 14px;
-  background: #fffaf5;
+  padding: 2px;
+  border: 1px solid rgba(36, 107, 223, 0.1);
+  border-radius: 15px;
+  background: linear-gradient(145deg, #FFFFFF, #EDF4FF);
   box-shadow: 0 5px 16px rgba(23, 49, 91, 0.1);
 }
 
@@ -23,11 +24,11 @@
 }
 
 .citeface-brand__name {
-  color: var(--cf-ink);
+  color: var(--cf-blue-dark);
   font-family: var(--cf-font-display);
   font-size: 1.43rem;
-  font-weight: 850;
-  letter-spacing: -0.075em;
+  font-weight: 800;
+  letter-spacing: -0.065em;
   line-height: 1;
 }
 
@@ -46,7 +47,7 @@
 .citeface-brand--large .citeface-brand__mark {
   width: 52px;
   height: 52px;
-  border-radius: 17px;
+  border-radius: 18px;
 }
 
 .citeface-brand--large .citeface-brand__name {

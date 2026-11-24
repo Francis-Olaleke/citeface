@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 interface CitefaceBrandProps {
   inverse?: boolean;
   large?: boolean;
@@ -9,6 +11,7 @@ export default function CitefaceBrand({
   large = false,
   showTagline = true,
 }: CitefaceBrandProps) {
+  const gradientId = `citeface-mark-spectrum-${useId().replace(/:/g, "")}`;
   const classes = [
     "citeface-brand",
     inverse ? "citeface-brand--inverse" : "",
@@ -27,7 +30,7 @@ export default function CitefaceBrand({
       >
         <defs>
           <linearGradient
-            id="citeface-mark-spectrum"
+            id={gradientId}
             x1="7"
             y1="8"
             x2="41"
@@ -42,25 +45,19 @@ export default function CitefaceBrand({
         <path
           d="M36.2 13.2A17.2 17.2 0 1 0 36.2 34.8"
           fill="none"
-          stroke="url(#citeface-mark-spectrum)"
+          stroke={`url(#${gradientId})`}
           strokeLinecap="round"
-          strokeWidth="6"
+          strokeWidth="6.5"
         />
         <path
-          d="M30.6 16.4h8v8"
+          d="M28.5 22h7m-7 5h4.8"
           fill="none"
           stroke="#17315B"
           strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2.8"
+          strokeWidth="2.6"
         />
-        <path
-          d="M29.8 23.8h7.4m-7.4 4.7h5.1"
-          fill="none"
-          stroke="#17315B"
-          strokeLinecap="round"
-          strokeWidth="2.4"
-        />
+        <circle cx="36" cy="12.5" r="3.1" fill="#F0922E" />
+        <circle cx="36" cy="35.5" r="3.1" fill="#7654D8" />
       </svg>
       <span className="citeface-brand__copy">
         <span className="citeface-brand__name">

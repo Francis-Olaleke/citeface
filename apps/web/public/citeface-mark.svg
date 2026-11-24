@@ -6,7 +6,8 @@
       <stop offset="1" stop-color="#7654D8"/>
     </linearGradient>
   </defs>
-  <path d="M36.2 13.2A17.2 17.2 0 1 0 36.2 34.8" stroke="url(#citeface-spectrum)" stroke-linecap="round" stroke-width="6"/>
-  <path d="M30.6 16.4h8v8" stroke="#17315B" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8"/>
-  <path d="M29.8 23.8h7.4m-7.4 4.7h5.1" stroke="#17315B" stroke-linecap="round" stroke-width="2.4"/>
+  <path d="M36.2 13.2A17.2 17.2 0 1 0 36.2 34.8" stroke="url(#citeface-spectrum)" stroke-linecap="round" stroke-width="6.5"/>
+  <path d="M28.5 22h7m-7 5h4.8" stroke="#17315B" stroke-linecap="round" stroke-width="2.6"/>
+  <circle cx="36" cy="12.5" r="3.1" fill="#F0922E"/>
+  <circle cx="36" cy="35.5" r="3.1" fill="#7654D8"/>
 </svg>

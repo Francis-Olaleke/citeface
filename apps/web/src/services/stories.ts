@@ -211,6 +211,39 @@ export async function getMyDrafts(): Promise<MyDraftsResponse> {
   return data as unknown as MyDraftsResponse;
 }
 
+export async function deleteStoryDraft(id: string): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/drafts/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
+
+  if (!response.ok) {
+    let data: Record<string, unknown> = {};
+
+    try {
+      const result: unknown = await response.json();
+
+      if (typeof result === "object" && result !== null) {
+        data = result as Record<string, unknown>;
+      }
+    } catch {
+      // Handle empty or non-JSON responses.
+    }
+
+    const message =
+      typeof data.message === "string"
+        ? data.message
+        : typeof data.error === "string"
+          ? data.error
+          : "Unable to delete your research draft. Please try again.";
+
+    throw new StoriesServiceError(message, response.status);
+  }
+}
+
 export interface UpdateDraftPayload {
   title?: string;
   summary?: string;

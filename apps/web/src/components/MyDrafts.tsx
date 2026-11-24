@@ -2,14 +2,18 @@
 import { useEffect, useState } from "react";
 
 import {
+  deleteStoryDraft,
   getMyDrafts,
+  StoriesServiceError,
   type DraftStory,
 } from "../services/stories";
+import { useNotification } from "../context/NotificationContext";
 
 import "./MyDrafts.css";
 
 interface MyDraftsProps {
   onOpenDraft: (draft: DraftStory) => void;
+  onDraftDeleted?: (draftId: string) => void;
   refreshKey?: number;
 }
 
@@ -37,12 +41,15 @@ function formatDate(value: string) {
 
 function MyDrafts({
   onOpenDraft,
+  onDraftDeleted,
   refreshKey = 0,
 }: MyDraftsProps) {
+  const { notify } = useNotification();
   const [drafts, setDrafts] = useState<DraftStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +85,36 @@ function MyDrafts({
       cancelled = true;
     };
   }, [refresh, refreshKey]);
+
+  async function handleDeleteDraft(draft: DraftStory) {
+    if (deletingDraftId) return;
+
+    const confirmed = window.confirm(
+      `Delete "${draft.title}"? This removes the draft from your account and cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingDraftId(draft.id);
+
+    try {
+      await deleteStoryDraft(draft.id);
+      setDrafts((currentDrafts) =>
+        currentDrafts.filter((currentDraft) => currentDraft.id !== draft.id),
+      );
+      onDraftDeleted?.(draft.id);
+      notify("Your research draft has been deleted.", { type: "success" });
+    } catch (deleteError) {
+      notify(
+        deleteError instanceof StoriesServiceError
+          ? deleteError.message
+          : "We couldn't delete your research draft. Please try again.",
+        { type: "error" },
+      );
+    } finally {
+      setDeletingDraftId(null);
+    }
+  }
 
   return (
     <section className="panel my-drafts">
@@ -143,13 +180,24 @@ function MyDrafts({
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="draft-open-button"
-                onClick={() => onOpenDraft(draft)}
-              >
-                Open draft
-              </button>
+              <div className="draft-item-actions">
+                <button
+                  type="button"
+                  className="draft-open-button"
+                  onClick={() => onOpenDraft(draft)}
+                  disabled={deletingDraftId !== null}
+                >
+                  Edit draft
+                </button>
+                <button
+                  type="button"
+                  className="draft-delete-button"
+                  onClick={() => void handleDeleteDraft(draft)}
+                  disabled={deletingDraftId !== null}
+                >
+                  {deletingDraftId === draft.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             </article>
           ))}
         </div>

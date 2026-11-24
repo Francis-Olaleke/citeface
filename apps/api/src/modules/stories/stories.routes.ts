@@ -1296,6 +1296,75 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ drafts });
   });
 
+  app.delete<{ Params: { id: string } }>(
+    "/drafts/:id",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.citeface_session;
+
+      if (!token) {
+        return reply.code(401).send({ error: "Authentication required" });
+      }
+
+      const user = await getSessionUser(token);
+
+      if (!user) {
+        reply.clearCookie("citeface_session", { path: "/" });
+        return reply.code(401).send({
+          error: "Your session is invalid or has expired",
+        });
+      }
+
+      const deleted = await prisma.$transaction(async (tx) => {
+        const result = await tx.researchStory.updateMany({
+          where: {
+            id: request.params.id,
+            creatorId: user.id,
+            status: "DRAFT",
+            deletedAt: null,
+            publishedAt: null,
+          },
+          data: { deletedAt: new Date() },
+        });
+
+        if (result.count !== 1) {
+          return false;
+        }
+
+        await tx.auditEvent.create({
+          data: {
+            actorId: user.id,
+            action: "STORY_DRAFT_DELETED",
+            entityType: "ResearchStory",
+            entityId: request.params.id,
+          },
+        });
+
+        return true;
+      });
+
+      if (!deleted) {
+        return reply.code(404).send({
+          error: "Not Found",
+          message: "Research draft not found.",
+        });
+      }
+
+      return reply.send({ success: true });
+    },
+  );
+
   // F-05.5: Edit a published story within the original 15-minute window.
   app.patch<{ Params: { id: string }; Body: UpdateStoryBody }>(
     "/:id/published",

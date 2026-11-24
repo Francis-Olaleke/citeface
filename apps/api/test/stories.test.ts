@@ -939,6 +939,102 @@ describe("F-05.2 research story draft listing", () => {
   });
 });
 
+describe("F-05.2 research story draft deletion", () => {
+  it("rejects deletion without authentication", async () => {
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/stories/drafts/00000000-0000-4000-8000-000000000001",
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("soft-deletes the owner's draft, audits it, and removes it from the list", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+    const draft = await createStory(user.id, {
+      title: "Draft to delete",
+      slug: "draft-to-delete",
+      status: "DRAFT",
+      publishedAt: null,
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/stories/drafts/${draft.id}`,
+      cookies: cookie,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ success: true });
+
+    const storedDraft = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(storedDraft.deletedAt).not.toBeNull();
+
+    const audit = await prisma.auditEvent.findFirst({
+      where: {
+        action: "STORY_DRAFT_DELETED",
+        entityId: draft.id,
+        actorId: user.id,
+      },
+    });
+    expect(audit).not.toBeNull();
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/stories/drafts",
+      cookies: cookie,
+    });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().drafts).toHaveLength(0);
+  });
+
+  it("does not allow deleting another user's draft or a published story", async () => {
+    const owner = await registerAndLogin(app, 1);
+    const other = await registerAndLogin(app, 2);
+    const ownerUser = await prisma.user.findUniqueOrThrow({
+      where: { username: "testuser1" },
+    });
+    const draft = await createStory(ownerUser.id, {
+      title: "Private draft",
+      slug: "private-draft-delete",
+      status: "DRAFT",
+      publishedAt: null,
+    });
+    const published = await createStory(ownerUser.id, {
+      title: "Published story",
+      slug: "published-story-delete",
+    });
+
+    const otherUserResponse = await app.inject({
+      method: "DELETE",
+      url: `/stories/drafts/${draft.id}`,
+      cookies: other.cookie,
+    });
+    const publishedResponse = await app.inject({
+      method: "DELETE",
+      url: `/stories/drafts/${published.id}`,
+      cookies: owner.cookie,
+    });
+
+    expect(otherUserResponse.statusCode).toBe(404);
+    expect(publishedResponse.statusCode).toBe(404);
+
+    const unchangedDraft = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    const unchangedPublished = await prisma.researchStory.findUniqueOrThrow({
+      where: { id: published.id },
+    });
+    expect(unchangedDraft.deletedAt).toBeNull();
+    expect(unchangedPublished.deletedAt).toBeNull();
+  });
+});
+
 describe("F-05.3 research story draft editing", () => {
   it("rejects editing without authentication", async () => {
     const res = await app.inject({
