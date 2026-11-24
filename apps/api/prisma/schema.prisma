@@ -133,6 +133,27 @@ enum NotificationType {
   SYSTEM
 }
 
+enum MentorshipRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CLOSED
+}
+
+enum ExpertServiceType {
+  MENTORSHIP
+  TUTORING
+  TEACHING
+  CONSULTING
+  RESEARCH_ADVICE
+}
+
+enum CommunityMemberRole {
+  MEMBER
+  MODERATOR
+  OWNER
+}
+
 enum ConsentPurpose {
   TERMS_OF_SERVICE
   PRIVACY_POLICY
@@ -191,6 +212,14 @@ model User {
   consentRecords ConsentRecord[]
   productEvents  ProductEvent[]
   auditEvents    AuditEvent[]    @relation("AuditActor")
+  conversationParticipants ConversationParticipant[]
+  sentMessages DirectMessage[] @relation("DirectMessageSender")
+  mentorOfferings MentorOffering[]
+  mentorshipRequestsSent MentorshipRequest[] @relation("MentorshipRequester")
+  mentorshipRequestsReceived MentorshipRequest[] @relation("MentorshipMentor")
+  communityMemberships CommunityMember[]
+  communityPosts CommunityPost[]
+  ownedCommunities Community[]
 
   @@index([status])
   @@index([createdAt])
@@ -236,7 +265,17 @@ model ResearcherProfile {
   country         String?
   city            String?
   websiteUrl      String?
+  linkedinUrl     String?
+  googleScholarUrl String?
   orcidId         String?  @unique
+  citationCount   Int      @default(0)
+  specializations Json?    @db.JsonB
+  education       Json?    @db.JsonB
+  grants          Json?    @db.JsonB
+  fellowships     Json?    @db.JsonB
+  professionalBodies Json? @db.JsonB
+  stripeAccountId String?
+  stripeOnboardingComplete Boolean @default(false)
   isVerified      Boolean  @default(false)
   createdAt       DateTime @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
@@ -761,6 +800,137 @@ model AuditEvent {
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
   @@index([createdAt])
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  deletedAt DateTime? @db.Timestamptz(6)
+
+  participants ConversationParticipant[]
+  messages DirectMessage[]
+
+  @@index([updatedAt])
+}
+
+model ConversationParticipant {
+  conversationId String    @db.Uuid
+  userId         String    @db.Uuid
+  joinedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  mutedAt        DateTime? @db.Timestamptz(6)
+  leftAt         DateTime? @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId, joinedAt])
+}
+
+model DirectMessage {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @db.Uuid
+  senderId       String    @db.Uuid
+  body           String    @db.Text
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  readAt         DateTime? @db.Timestamptz(6)
+  editedAt       DateTime? @db.Timestamptz(6)
+  deletedAt      DateTime? @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model MentorOffering {
+  id          String   @id @default(uuid()) @db.Uuid
+  mentorId    String   @db.Uuid
+  serviceType ExpertServiceType @default(MENTORSHIP)
+  expertise   String
+  description String   @db.Text
+  priceMinor  Int      @default(0)
+  currency    String   @default("USD")
+  durationMinutes Int  @default(60)
+  stripePriceId String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  mentor User @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  requests MentorshipRequest[]
+
+  @@index([mentorId, isActive])
+}
+
+model MentorshipRequest {
+  id          String                    @id @default(uuid()) @db.Uuid
+  offeringId  String                    @db.Uuid
+  requesterId String                    @db.Uuid
+  mentorId    String                    @db.Uuid
+  message     String                    @db.Text
+  status      MentorshipRequestStatus   @default(PENDING)
+  paymentStatus String                  @default("NOT_REQUIRED")
+  stripeCheckoutSessionId String?
+  stripePaymentIntentId String?
+  createdAt   DateTime                  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime                  @updatedAt @db.Timestamptz(6)
+
+  offering  MentorOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  requester User           @relation("MentorshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  mentor    User           @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, status, createdAt])
+  @@index([requesterId, status, createdAt])
+}
+
+model Community {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String   @db.Text
+  ownerId     String   @db.Uuid
+  isPrivate   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  owner   User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members CommunityMember[]
+  posts   CommunityPost[]
+
+  @@index([ownerId, createdAt])
+  @@index([isPrivate, createdAt])
+}
+
+model CommunityMember {
+  communityId String              @db.Uuid
+  userId      String              @db.Uuid
+  role        CommunityMemberRole @default(MEMBER)
+  joinedAt    DateTime            @default(now()) @db.Timestamptz(6)
+  leftAt      DateTime?           @db.Timestamptz(6)
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, userId])
+  @@index([userId, joinedAt])
+}
+
+model CommunityPost {
+  id          String    @id @default(uuid()) @db.Uuid
+  communityId String    @db.Uuid
+  authorId    String    @db.Uuid
+  body        String    @db.Text
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  deletedAt   DateTime? @db.Timestamptz(6)
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, createdAt])
+  @@index([authorId, createdAt])
 }
 
 model PasswordResetToken {

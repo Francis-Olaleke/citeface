@@ -79,7 +79,7 @@ async function requestResetForUser() {
 beforeAll(async () => {
   process.env.RESEND_API_KEY = "test_api_key";
   process.env.RESEND_FROM_EMAIL = "Citeface <test@example.com>";
-  process.env.WEB_APP_URL = "http://localhost:5173";
+  process.env.WEB_APP_URL = "http://127.0.0.1:5175";
 
   app = await makeApp();
 });

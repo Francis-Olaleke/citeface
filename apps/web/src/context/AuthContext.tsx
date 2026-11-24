@@ -97,8 +97,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   async function login(credentials: LoginData) {
-    const response = await loginUser(credentials);
-    setUser(response.user);
+    await loginUser(credentials);
+    const currentUser = await getCurrentUser();
+    setUser(currentUser);
     setError(null);
   }
 

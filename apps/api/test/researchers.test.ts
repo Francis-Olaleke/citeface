@@ -9,7 +9,7 @@ import {
 import type { FastifyInstance } from "fastify";
 
 import { prisma } from "../src/plugins/database.js";
-import { makeApp, resetDb } from "./helpers.js";
+import { makeApp, registerAndLogin, resetDb } from "./helpers.js";
 
 let app: FastifyInstance;
 
@@ -66,6 +66,59 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetDb();
+});
+
+describe("F-08 researcher discovery and connections", () => {
+  it("lists only active researchers with published work and supports search", async () => {
+    const molecular = await createResearcher(1);
+    const suspended = await createResearcher(2, { status: "SUSPENDED" });
+
+    await prisma.researcherProfile.create({
+      data: {
+        userId: molecular.id,
+        headline: "Molecular genomics researcher",
+        country: "Nigeria",
+      },
+    });
+    await createPublishedStory(molecular.id, { slug: "genomics-story" });
+    await createPublishedStory(suspended.id, { slug: "suspended-story" });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/researchers?q=genomics",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().researchers).toHaveLength(1);
+    expect(response.json().researchers[0]).toMatchObject({
+      username: "researcher1",
+      displayName: "Researcher 1",
+      publicationCount: 1,
+      followerCount: 0,
+    });
+  });
+
+  it("allows an authenticated researcher to follow and unfollow another researcher", async () => {
+    const followerSession = await registerAndLogin(app, 1);
+    const followed = await createResearcher();
+    await createPublishedStory(followed.id, { slug: "followed-story" });
+
+    const follow = await app.inject({
+      method: "POST",
+      url: "/researchers/researcher1/follow",
+      cookies: followerSession.cookie,
+    });
+    expect(follow.statusCode).toBe(200);
+    expect(follow.json()).toEqual({ following: true, followerCount: 1 });
+
+    const unfollow = await app.inject({
+      method: "DELETE",
+      url: "/researchers/researcher1/follow",
+      cookies: followerSession.cookie,
+    });
+    expect(unfollow.statusCode).toBe(200);
+    expect(unfollow.json()).toEqual({ following: false, followerCount: 0 });
+  });
 });
 
 describe("F-07 public researcher profiles", () => {

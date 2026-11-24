@@ -154,6 +154,35 @@
   margin: 18px 28px 0 160px;
 }
 
+.researcher-follow-button {
+  min-width: 94px;
+  padding: 8px 14px;
+  border: 1px solid var(--cf-blue);
+  border-radius: 999px;
+  background: var(--cf-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.researcher-follow-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.researcher-message-button {
+  min-width: 94px;
+  padding: 8px 14px;
+  border: 1px solid #dfe6ef;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--cf-blue-dark);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
 .researcher-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;

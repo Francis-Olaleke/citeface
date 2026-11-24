@@ -648,12 +648,20 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 Discover
               </button>
 
-              <button className="nav-item" type="button" disabled>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() => navigate("/network")}
+              >
                 <span className="nav-symbol"><NavIcon name="network" /></span>
                 My Network
               </button>
 
-              <button className="nav-item" type="button" disabled>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() => navigate("/messages")}
+              >
                 <span className="nav-symbol"><NavIcon name="messages" /></span>
                 Messages
               </button>
@@ -676,9 +684,22 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 My Research
               </button>
 
-              <button className="nav-item" type="button" disabled>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() => navigate("/communities")}
+              >
                 <span className="nav-symbol"><NavIcon name="communities" /></span>
                 Communities
+              </button>
+
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() => navigate("/mentorship")}
+              >
+                <span className="nav-symbol"><NavIcon name="opportunities" /></span>
+                Mentorship
               </button>
 
               <button className="nav-item" type="button" disabled>
@@ -1071,7 +1092,6 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 
                   <div>
                     <strong>{user?.displayName}</strong>
-                    <small>@{user?.username}</small>
                   </div>
                 </Link>
               </div>
@@ -1129,6 +1149,9 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 Your Citeface profile is ready. Build your research
                 identity and connect with the research community.
               </p>
+              <Link className="profile-credibility-link" to="/profile/edit">
+                Edit professional profile
+              </Link>
             </section>
 
           </aside>

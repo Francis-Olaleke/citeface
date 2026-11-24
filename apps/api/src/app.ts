@@ -7,6 +7,9 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import storiesRoutes from "./modules/stories/stories.routes.js";
 import researchersRoutes from "./modules/researchers/researchers.routes.js";
 import mediaRoutes from "./modules/media/media.routes.js";
+import messagesRoutes from "./modules/messages/messages.routes.js";
+import mentorshipRoutes from "./modules/mentorship/mentorship.routes.js";
+import communitiesRoutes from "./modules/communities/communities.routes.js";
 
 export async function buildApp(
   opts: { logger?: boolean; disconnectOnClose?: boolean } = {},
@@ -32,6 +35,9 @@ const app = Fastify({
   await app.register(storiesRoutes, { prefix: "/stories" });
   await app.register(researchersRoutes, { prefix: "/researchers" });
   app.register(mediaRoutes, { prefix: "/media" });
+  await app.register(messagesRoutes, { prefix: "/messages" });
+  await app.register(mentorshipRoutes, { prefix: "/mentorship" });
+  await app.register(communitiesRoutes, { prefix: "/communities" });
 
   app.decorate("prisma", prisma);
 

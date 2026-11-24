@@ -20,6 +20,11 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import StoryDetail from "./pages/StoryDetail";
 import ResearcherProfile from "./pages/ResearcherProfile";
+import ResearcherNetwork from "./pages/ResearcherNetwork";
+import Messages from "./pages/Messages";
+import Mentorship from "./pages/Mentorship";
+import Communities from "./pages/Communities";
+import CredibilityProfile from "./pages/CredibilityProfile";
 import "./styles/design-system.css";
 import "./styles/notifications.css";
 import "./styles/brand-identity.css";
@@ -87,6 +92,14 @@ function App() {
 
           <Route path="/stories/:slug" element={<StoryDetail />} />
           <Route path="/researchers/:username" element={<ResearcherProfile />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/network" element={<ResearcherNetwork />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/messages/:conversationId" element={<Messages />} />
+            <Route path="/mentorship" element={<Mentorship />} />
+            <Route path="/communities" element={<Communities />} />
+            <Route path="/profile/edit" element={<CredibilityProfile />} />
+          </Route>
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />

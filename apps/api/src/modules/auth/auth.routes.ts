@@ -39,7 +39,7 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       email: string;
       password: string;
       displayName: string;
-      username: string;
+      username?: string;
     };
 
     try {

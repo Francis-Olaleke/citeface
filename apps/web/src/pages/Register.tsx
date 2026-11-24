@@ -7,7 +7,6 @@ import AuthLayout from "../components/AuthLayout";
 
 function Register() {
   const [displayName, setDisplayName] = useState("");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,7 +31,6 @@ function Register() {
     try {
       await register({
         displayName: displayName.trim(),
-        username: username.trim(),
         email: email.trim(),
         password,
       });
@@ -71,21 +69,6 @@ function Register() {
           />
         </div>
 
-        <div className="citeface-auth-field">
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="Choose a username"
-            autoComplete="username"
-            required
-            minLength={3}
-            pattern="[a-zA-Z0-9_]+"
-            disabled={submitting}
-          />
-        </div>
 
         <div className="citeface-auth-field">
           <label htmlFor="email">Email address</label>

@@ -17,10 +17,19 @@ export async function registerUser(data: {
   email: string;
   password: string;
   displayName: string;
-  username: string;
+  username?: string;
 }) {
   const email = data.email.trim().toLowerCase();
-  const username = data.username.trim().toLowerCase();
+  const baseHandle = data.displayName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 18);
+  const explicitHandle = data.username?.trim().toLowerCase();
+  const username =
+    explicitHandle ||
+    `${baseHandle || "researcher"}${randomBytes(4).toString("hex")}`;
 
   const passwordHash = await hashPassword(data.password);
 

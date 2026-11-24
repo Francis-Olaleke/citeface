@@ -1,0 +1,23 @@
+.credibility-page { min-height: 100vh; background: #f5f7fb; color: #17243a; }
+.credibility-topbar { min-height: 76px; padding: 12px 5%; display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #e8edf4; }
+.credibility-back { color: var(--cf-blue-dark); font-size: 13px; font-weight: 650; text-decoration: none; }
+.credibility-main { width: min(960px, calc(100% - 32px)); margin: 34px auto 70px; }
+.credibility-heading { margin-bottom: 20px; }
+.credibility-heading > span { color: var(--cf-blue); font-size: 11px; font-weight: 750; letter-spacing: .08em; }
+.credibility-heading h1 { margin: 6px 0; font-size: clamp(28px, 5vw, 42px); }
+.credibility-heading p { margin: 0; color: #667085; }
+.credibility-form { display: grid; gap: 14px; }
+.credibility-section { padding: 20px; border: 1px solid #e8edf4; border-radius: 14px; background: #fff; }
+.credibility-section h2 { margin: 0 0 16px; font-size: 17px; }
+.credibility-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.credibility-grid label, .credibility-section > label { display: grid; gap: 7px; color: #48566b; font-size: 12px; font-weight: 650; }
+.credibility-grid input, .credibility-grid textarea, .credibility-section > label textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe6ef; border-radius: 9px; font: inherit; resize: vertical; }
+.credibility-span { grid-column: 1 / -1; }
+.credibility-section small { color: #778195; font-size: 11px; font-weight: 400; }
+.credibility-save { justify-self: start; border: 0; border-radius: 9px; background: var(--cf-blue); color: #fff; padding: 12px 16px; font-weight: 650; cursor: pointer; }
+.credibility-save:disabled { opacity: .6; cursor: wait; }
+.credibility-error, .credibility-success { margin: 0; padding: 10px 12px; border-radius: 9px; font-size: 13px; }
+.credibility-error { background: #fff0f2; color: #a83246; }
+.credibility-success { background: #edf8f4; color: #087969; }
+.credibility-state { padding: 28px; border: 1px solid #e8edf4; border-radius: 14px; background: #fff; text-align: center; }
+@media (max-width: 720px) { .credibility-grid { grid-template-columns: 1fr; } .credibility-span { grid-column: auto; } }

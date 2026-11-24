@@ -1,7 +1,7 @@
 export const registerSchema = {
   body: {
     type: "object",
-    required: ["email", "password", "displayName", "username"],
+    required: ["email", "password", "displayName"],
     additionalProperties: false,
     properties: {
       email: {

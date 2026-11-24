@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import CitefaceBrand from "../components/CitefaceBrand";
+import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { startConversation } from "../services/messages";
 
 import {
   getResearcher,
   ResearcherServiceError,
+  setResearcherFollowing,
   type ResearcherResponse,
 } from "../services/researchers";
 
@@ -54,12 +58,18 @@ function safeExternalUrl(value: string | null | undefined) {
 
 function ResearcherProfile() {
   const { username } = useParams<{ username: string }>();
+  const { user } = useAuth();
+  const { notify } = useNotification();
+  const navigate = useNavigate();
 
   const [data, setData] = useState<ResearcherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [followingBusy, setFollowingBusy] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +90,8 @@ function ResearcherProfile() {
 
         if (!cancelled) {
           setData(result);
+          setIsFollowing(result.researcher.isFollowing);
+          setFollowerCount(result.researcher.followerCount);
         }
       } catch (err) {
         if (cancelled) return;
@@ -116,6 +128,47 @@ function ResearcherProfile() {
   const orcid = profile?.orcidId
     ? `https://orcid.org/${encodeURIComponent(profile.orcidId)}`
     : null;
+
+  async function handleFollowToggle() {
+    if (!username || followingBusy) return;
+
+    setFollowingBusy(true);
+    try {
+      const result = await setResearcherFollowing(username, !isFollowing);
+      setIsFollowing(result.following);
+      setFollowerCount(result.followerCount);
+      notify(
+        result.following
+          ? `You are now following ${researcher?.displayName ?? "this researcher"}.`
+          : `You unfollowed ${researcher?.displayName ?? "this researcher"}.`,
+        { type: "success" },
+      );
+    } catch (followError) {
+      notify(
+        followError instanceof ResearcherServiceError
+          ? followError.message
+          : "Unable to update this connection.",
+        { type: "error" },
+      );
+    } finally {
+      setFollowingBusy(false);
+    }
+  }
+
+  async function handleMessage() {
+    if (!username) return;
+    try {
+      const conversationId = await startConversation(username);
+      navigate(`/messages/${conversationId}`);
+    } catch (messageError) {
+      notify(
+        messageError instanceof Error
+          ? messageError.message
+          : "Unable to start this conversation.",
+        { type: "error" },
+      );
+    }
+  }
 
   return (
     <div className="researcher-page">
@@ -191,9 +244,6 @@ function ResearcherProfile() {
                       </span>
                     )}
                   </div>
-                  <p className="researcher-username">
-                    @{researcher.username}
-                  </p>
                   {profile?.headline && (
                     <p className="researcher-headline">
                       {profile.headline}
@@ -219,6 +269,29 @@ function ResearcherProfile() {
                   <a href={orcid} target="_blank" rel="noreferrer">
                     ORCID
                   </a>
+                )}
+                {user && user.username !== researcher.username && (
+                  <button
+                    type="button"
+                    className="researcher-follow-button"
+                    onClick={() => void handleFollowToggle()}
+                    disabled={followingBusy}
+                  >
+                    {followingBusy
+                      ? "Updating..."
+                      : isFollowing
+                        ? "Following"
+                        : "Follow"}
+                  </button>
+                )}
+                {user && user.username !== researcher.username && (
+                  <button
+                    type="button"
+                    className="researcher-message-button"
+                    onClick={() => void handleMessage()}
+                  >
+                    Message
+                  </button>
                 )}
               </div>
             </section>
@@ -371,6 +444,7 @@ function ResearcherProfile() {
 
                 <section className="researcher-panel researcher-joined">
                   <h2>On Citeface</h2>
+                  <p>{followerCount} {followerCount === 1 ? "follower" : "followers"}</p>
                   <p>
                     Joined{" "}
                     {new Date(researcher.createdAt).toLocaleDateString(
