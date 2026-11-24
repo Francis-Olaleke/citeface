@@ -22,6 +22,7 @@ import StoryDetail from "./pages/StoryDetail";
 import ResearcherProfile from "./pages/ResearcherProfile";
 import "./styles/design-system.css";
 import "./styles/notifications.css";
+import "./styles/brand-identity.css";
 
 function ProtectedRoute() {
   const { user, loading, error } = useAuth();

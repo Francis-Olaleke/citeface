@@ -379,6 +379,7 @@ export async function completeMediaUpload(
     asset = await cloudinary.api.resource(record.storageKey, {
       resource_type: expected.resourceType,
       type: "authenticated",
+      ...(expected.type === "VIDEO" ? { media_metadata: true } : {}),
     }) as CloudinaryAsset;
   } catch {
     throw new MediaUploadError(

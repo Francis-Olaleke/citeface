@@ -542,6 +542,43 @@ describe("F-04 discovery feed", () => {
     expect(res.json().pagination.total).toBe(1);
   });
 
+  it("filters stories by topic slug", async () => {
+    const user = await createUser();
+    const climateTopic = await prisma.topic.create({
+      data: { name: "Climate Science", slug: "climate-science" },
+    });
+    const healthTopic = await prisma.topic.create({
+      data: { name: "Public Health", slug: "public-health" },
+    });
+    const climateStory = await createStory(user.id, {
+      title: "Climate Adaptation Research",
+      slug: "climate-adaptation-topic-filter",
+    });
+    const healthStory = await createStory(user.id, {
+      title: "Community Health Research",
+      slug: "community-health-topic-filter",
+    });
+
+    await prisma.storyTopic.createMany({
+      data: [
+        { storyId: climateStory.id, topicId: climateTopic.id },
+        { storyId: healthStory.id, topicId: healthTopic.id },
+      ],
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/stories/feed?topic=climate-science",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().stories).toHaveLength(1);
+    expect(response.json().stories[0].title).toBe(
+      "Climate Adaptation Research",
+    );
+    expect(response.json().pagination.total).toBe(1);
+  });
+
   it("combines search and classification filters", async () => {
     const user = await createUser();
 
@@ -1260,7 +1297,7 @@ describe("F-05.4 research story publishing", () => {
     expect(responseText).not.toContain("storageProvider");
   });
 
-  it("does not issue a preview URL until media is ready", async () => {
+  it("does not issue an image preview URL until the image is ready", async () => {
     const { cookie } = await registerAndLogin(app);
     const draft = await createDraft(cookie);
     const storyId = draft.json().story.id;
@@ -1304,6 +1341,30 @@ describe("F-05.4 research story publishing", () => {
       type: "VIDEO",
       mimeType: "video/mp4",
       status: "READY",
+      deliveryUrl: expect.stringContaining("/video/authenticated/signed/"),
+    });
+  });
+
+  it("returns a playable signed preview while a video is processing", async () => {
+    const { cookie } = await registerAndLogin(app);
+    const draft = await createDraft(cookie);
+    const storyId = draft.json().story.id;
+    const media = await createAttachableMedia(storyId, "VIDEO", "PROCESSING");
+
+    await prisma.storyMedia.create({
+      data: { storyId, mediaAssetId: media.id, sortOrder: 0 },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/stories/${storyId}/media`,
+      cookies: cookie,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().attachments[0].media).toMatchObject({
+      type: "VIDEO",
+      status: "PROCESSING",
       deliveryUrl: expect.stringContaining("/video/authenticated/signed/"),
     });
   });

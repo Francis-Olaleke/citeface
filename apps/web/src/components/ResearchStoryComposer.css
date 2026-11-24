@@ -9,7 +9,7 @@
 }
 
 .research-composer-eyebrow {
-  color: #2563eb;
+  color: var(--cf-blue);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -54,8 +54,8 @@
 .research-composer-field input:focus,
 .research-composer-field textarea:focus,
 .research-composer-field select:focus {
-  outline: 2px solid #bfdbfe;
-  border-color: #2563eb;
+  outline: 2px solid var(--cf-focus);
+  border-color: var(--cf-blue);
 }
 
 .research-composer-field textarea {
@@ -110,7 +110,7 @@
 
 .research-composer-submit {
   color: #fff;
-  background: #2563eb;
+  background: var(--cf-blue);
   border: none;
 }
 

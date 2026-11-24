@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import CitefaceBrand from "../components/CitefaceBrand";
 
 import {
   getResearcher,
@@ -119,9 +120,8 @@ function ResearcherProfile() {
   return (
     <div className="researcher-page">
       <header className="researcher-topbar">
-        <Link className="researcher-brand" to="/">
-          <span>Citeface</span>
-          <small>Research. Connect. Discover.</small>
+        <Link className="citeface-brand-link" to="/" aria-label="Citeface home">
+          <CitefaceBrand />
         </Link>
         <Link className="researcher-discover-link" to="/">
           Discover research

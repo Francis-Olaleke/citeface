@@ -22,6 +22,7 @@ interface FeedQuery {
   limit?: number;
   q?: string;
   classification?: ResearchClassification;
+  topic?: string;
 }
 
 interface CreateStoryBody {
@@ -301,7 +302,9 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
             status: attachment.media.processingStatus,
             errorCode: attachment.media.processingErrorCode,
             deliveryUrl:
-              attachment.media.processingStatus === "READY" &&
+              (attachment.media.processingStatus === "READY" ||
+                (attachment.media.type === "VIDEO" &&
+                  attachment.media.processingStatus === "PROCESSING")) &&
               (attachment.media.type === "IMAGE" ||
                 attachment.media.type === "VIDEO")
                 ? getMediaDeliveryUrl(
@@ -1599,6 +1602,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
               "PRELIMINARY_UNPUBLISHED",
             ],
           },
+          topic: { type: "string", minLength: 1, maxLength: 120 },
         },
         additionalProperties: false,
       },
@@ -1614,6 +1618,7 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
 
     const searchQuery = request.query.q?.trim();
     const classification = request.query.classification;
+    const topicSlug = request.query.topic?.trim();
 
     const where = {
       status: "PUBLISHED" as const,
@@ -1624,6 +1629,9 @@ const storiesRoutes: FastifyPluginAsync = async (app) => {
         deletedAt: null,
       },
       ...(classification ? { classification } : {}),
+      ...(topicSlug
+        ? { topics: { some: { topic: { slug: topicSlug } } } }
+        : {}),
       ...(searchQuery
         ? {
             OR: [

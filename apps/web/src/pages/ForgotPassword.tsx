@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { requestPasswordReset } from "../services/auth";
+import AuthLayout from "../components/AuthLayout";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -31,18 +32,13 @@ function ForgotPassword() {
   }
 
   return (
-    <main>
-      <h1>Reset your password</h1>
-      <p>Research. Connect. Discover.</p>
-
-      <h2>Forgot your password?</h2>
-      <p>
-        Enter the email address associated with your Citeface
-        account. If an account exists, we will send you a reset link.
-      </p>
-
-      <form onSubmit={handleSubmit}>
-        <div>
+    <AuthLayout
+      eyebrow="Account recovery"
+      title="Forgot your password?"
+      description="Enter the email address associated with your Citeface account. If an account exists, we will send you a reset link."
+    >
+      <form className="citeface-auth-form" onSubmit={handleSubmit}>
+        <div className="citeface-auth-field">
           <label htmlFor="email">Email address</label>
           <input
             id="email"
@@ -58,26 +54,26 @@ function ForgotPassword() {
         </div>
 
         {message && (
-          <p role="status" aria-live="polite">
+          <p className="citeface-auth-message citeface-auth-message--success" role="status" aria-live="polite">
             {message}
           </p>
         )}
 
         {error && (
-          <p role="alert" aria-live="polite">
+          <p className="citeface-auth-message citeface-auth-message--error" role="alert" aria-live="polite">
             {error}
           </p>
         )}
 
-        <button type="submit" disabled={submitting}>
+        <button className="citeface-auth-submit" type="submit" disabled={submitting}>
           {submitting ? "Sending..." : "Send reset link"}
         </button>
       </form>
 
-      <p>
+      <p className="citeface-auth-footer">
         Remembered your password? <Link to="/login">Sign in</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 

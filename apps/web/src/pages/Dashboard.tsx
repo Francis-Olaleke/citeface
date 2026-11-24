@@ -2,6 +2,7 @@
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import MyDrafts from "../components/MyDrafts";
+import CitefaceBrand from "../components/CitefaceBrand";
 import ResearchDraftEditor from "../components/ResearchDraftEditor";
 import ResearchStoryComposer from "../components/ResearchStoryComposer";
 
@@ -53,6 +54,68 @@ function formatPublishedDate(value: string | null) {
 
 function formatCount(value: number) {
   return new Intl.NumberFormat().format(value);
+}
+
+function getTopicSuggestions(stories: FeedStory[]) {
+  const topics = new Map<
+    string,
+    { id: string; name: string; slug: string; storyCount: number }
+  >();
+
+  for (const story of stories) {
+    for (const { topic } of story.topics) {
+      const current = topics.get(topic.slug);
+      topics.set(topic.slug, {
+        ...topic,
+        storyCount: (current?.storyCount ?? 0) + 1,
+      });
+    }
+  }
+
+  return Array.from(topics.values())
+    .sort(
+      (a, b) =>
+        b.storyCount - a.storyCount || a.name.localeCompare(b.name)
+    )
+    .slice(0, 8);
+}
+
+type NavIconName =
+  | "home"
+  | "discover"
+  | "network"
+  | "messages"
+  | "saved"
+  | "research"
+  | "communities"
+  | "opportunities";
+
+function NavIcon({ name }: { name: NavIconName }) {
+  const paths: Record<NavIconName, string> = {
+    home: "m3 10 9-7 9 7v9a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z",
+    discover: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm3.5 5.5L13 13l-4.5 2.5L11 11z",
+    network: "M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm14 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM9.5 7 6.5 17m8-10 3 10M8 19h8",
+    messages: "M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L5 20v-4.5a2.5 2.5 0 0 1-1-2z",
+    saved: "M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4z",
+    research: "M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm8 0v5h5M8 12h8m-8 4h8",
+    communities: "M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8-1a2.5 2.5 0 1 0 0-5M3 20v-1a6 6 0 0 1 12 0v1zm13-6a5 5 0 0 1 5 5v1h-4",
+    opportunities: "M4 7h16a2 2 0 0 1 2 2v10H2V9a2 2 0 0 1 2-2zm5 0V4h6v3m-13 5h20m-12 0v2h4v-2",
+  };
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={paths[name]} />
+    </svg>
+  );
 }
 
 function StoryCard({ story }: { story: FeedStory }) {
@@ -225,6 +288,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("");
   const [classificationFilter, setClassificationFilter] =
     useState<ResearchClassification | "">("");
   const feedRequestVersion = useRef(0);
@@ -232,8 +296,10 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftLoadError, setDraftLoadError] = useState<string | null>(null);
+  const [draftLoadAttempt, setDraftLoadAttempt] = useState(0);
   
   const initials = getInitials(user?.displayName ?? "C");
+  const topicSuggestions = getTopicSuggestions(stories);
 
   useEffect(() => {
     if (publicView || !draftId) {
@@ -287,7 +353,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [draftId, publicView]);
+  }, [draftId, publicView, draftLoadAttempt]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -313,6 +379,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
         const result = await getStoriesFeed(1, 20, {
           q: debouncedSearch,
           classification: classificationFilter,
+          topic: selectedTopic,
         });
 
         if (cancelled || requestVersion !== feedRequestVersion.current) {
@@ -344,7 +411,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, classificationFilter, refreshFeed]);
+  }, [debouncedSearch, classificationFilter, selectedTopic, refreshFeed]);
 
   async function handleLoadMore() {
     if (loadingStories || loadingMore || !hasNextPage) return;
@@ -359,6 +426,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
       const result = await getStoriesFeed(nextPage, 20, {
         q: debouncedSearch,
         classification: classificationFilter,
+        topic: selectedTopic,
       });
 
       if (requestVersion !== feedRequestVersion.current) return;
@@ -453,14 +521,9 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   return (
     <div className="citeface-app">
 <header className="topbar">
-  <div>
-    <div className="brand">
-      Cite<span>face</span>
-    </div>
-    <div className="brand-tagline">
-      Research. Connect. Discover.
-    </div>
-  </div>
+  <Link className="citeface-brand-link" to="/" aria-label="Citeface home">
+    <CitefaceBrand />
+  </Link>
 
   <div className="topbar-search">
     <input
@@ -530,43 +593,52 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 className="nav-item active"
                 type="button"
                 aria-current="page"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               >
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="home" /></span>
                 Home
               </button>
 
-              <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+              <button
+                className="nav-item"
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("discovery-feed")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
+                <span className="nav-symbol"><NavIcon name="discover" /></span>
                 Discover
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="network" /></span>
                 My Network
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="messages" /></span>
                 Messages
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="saved" /></span>
                 Saved
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="research" /></span>
                 My Research
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="communities" /></span>
                 Communities
               </button>
 
               <button className="nav-item" type="button" disabled>
-                <span className="nav-symbol" aria-hidden="true"></span>
+                <span className="nav-symbol"><NavIcon name="opportunities" /></span>
                 Opportunities
               </button>
             </nav>
@@ -580,6 +652,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
 
         <main className="main-feed">
          <section className="welcome-section">
+  <span className="welcome-eyebrow">A COMMUNITY FOR IDEAS IN MOTION</span>
   {publicView ? (
     <>
       <h1>Discover research. Connect with ideas.</h1>
@@ -612,6 +685,14 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
           {draftId && draftLoadError && !selectedDraft && (
             <div role="alert" className="draft-state">
               <p>{draftLoadError}</p>
+              <button
+                type="button"
+                onClick={() =>
+                  setDraftLoadAttempt((attempt) => attempt + 1)
+                }
+              >
+                Try again
+              </button>
               <button
                 type="button"
                 onClick={() => navigate("/dashboard", { replace: true })}
@@ -699,10 +780,10 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   </>
 )}
 
-          <div className="feed-heading">
+          <div className="feed-heading" id="discovery-feed">
             <h2>Discover research</h2>
             <span className="feed-preview-label">
-              {debouncedSearch || classificationFilter
+              {debouncedSearch || classificationFilter || selectedTopic
                 ? "Filtered stories"
                 : "Latest stories"}
             </span>
@@ -732,6 +813,52 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
             </select>
           </div>
 
+          <section className="panel explore-topics" aria-labelledby="explore-topic-heading">
+            <div className="explore-topics-heading">
+              <h3 id="explore-topic-heading">Explore by topic</h3>
+              {selectedTopic && (
+                <button
+                  type="button"
+                  className="clear-topic-filter"
+                  onClick={() => setSelectedTopic("")}
+                >
+                  Clear topic
+                </button>
+              )}
+            </div>
+
+            {topicSuggestions.length > 0 ? (
+              <div className="topic-list" role="group" aria-label="Research topics">
+                {topicSuggestions.map((topic) => (
+                  <button
+                    key={topic.slug}
+                    type="button"
+                    className={`topic-tag${selectedTopic === topic.slug ? " topic-tag-active" : ""}`}
+                    aria-pressed={selectedTopic === topic.slug}
+                    onClick={() =>
+                      setSelectedTopic((current) =>
+                        current === topic.slug ? "" : topic.slug
+                      )
+                    }
+                  >
+                    {topic.name}
+                    <span className="topic-tag-count">{topic.storyCount}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="topic-discovery-empty">
+                {loadingStories
+                  ? "Finding topics in published research..."
+                  : feedError
+                    ? "Topics are unavailable because the research feed could not be loaded."
+                    : selectedTopic
+                      ? "Clear the topic filter to explore other research areas."
+                      : "Topics will appear here as researchers publish stories."}
+              </p>
+            )}
+          </section>
+
           {loadingStories && (
             <section className="panel feed-state" aria-live="polite">
               <p>Loading research stories...</p>
@@ -756,22 +883,23 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
             <section className="panel feed-empty">
               <div className="empty-icon">*</div>
               <h3>
-                {debouncedSearch || classificationFilter
+                {debouncedSearch || classificationFilter || selectedTopic
                   ? "No matching research stories"
                   : "Your discovery feed starts here"}
               </h3>
               <p>
-                {debouncedSearch || classificationFilter
+                {debouncedSearch || classificationFilter || selectedTopic
                   ? "No published stories match your current search and filters. Try another search or research type."
                   : "There are no published research stories to show yet. As researchers publish stories, videos and graphical abstracts, they will appear here."}
               </p>
-              {(searchInput || classificationFilter) && (
+              {(searchInput || classificationFilter || selectedTopic) && (
                 <button
                   className="feed-retry-button"
                   type="button"
                   onClick={() => {
                     setSearchInput("");
                     setClassificationFilter("");
+                    setSelectedTopic("");
                   }}
                 >
                   Clear filters
@@ -879,25 +1007,6 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
               </p>
             </section>
 
-            <section className="panel" style={{ marginTop: "16px" }}>
-              <h2 className="panel-heading">Explore research areas</h2>
-
-              <div className="topic-list">
-                <span className="topic-tag">HealthTech</span>
-                <span className="topic-tag">AI & Technology</span>
-                <span className="topic-tag">Life Sciences</span>
-                <span className="topic-tag">Climate Science</span>
-                <span className="topic-tag">Agriculture</span>
-                <span className="topic-tag">Education</span>
-              </div>
-
-              <div className="sidebar-divider" />
-
-              <p className="sidebar-description">
-                Topic discovery and researcher recommendations
-                will become available as we build the feed.
-              </p>
-            </section>
           </aside>
         )}
       </div>

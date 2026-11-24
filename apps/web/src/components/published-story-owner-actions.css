@@ -55,7 +55,7 @@
 .cf-owner-actions__edit,
 .cf-owner-actions__save {
   color: #fff;
-  background: #185adb;
+  background: var(--cf-blue);
 }
 
 .cf-owner-actions__delete {
@@ -123,7 +123,7 @@
 .cf-owner-actions__form input:focus,
 .cf-owner-actions__form textarea:focus {
   outline: 3px solid rgb(24 90 219 / 14%);
-  border-color: #185adb;
+  border-color: var(--cf-blue);
 }
 
 .cf-owner-actions__form-buttons {

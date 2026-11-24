@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { resetPassword } from "../services/auth";
+import AuthLayout from "../components/AuthLayout";
 
 function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -56,21 +57,19 @@ function ResetPassword() {
   }
 
   return (
-    <main>
-      <h1>Create a new password</h1>
-      <p>Research. Connect. Discover.</p>
-
-      <h2>Reset your Citeface password</h2>
-      <p>Choose a new password for your account.</p>
-
+    <AuthLayout
+      eyebrow="Secure your account"
+      title="Choose a new password"
+      description="Set a new password to get back to your Citeface research community."
+    >
       {!token && (
-        <p role="alert">
+        <p className="citeface-auth-message citeface-auth-message--error" role="alert">
           No reset token was found. Please request a new reset link.
         </p>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <div>
+      <form className="citeface-auth-form" onSubmit={handleSubmit}>
+        <div className="citeface-auth-field">
           <label htmlFor="password">New password</label>
           <input
             id="password"
@@ -86,7 +85,7 @@ function ResetPassword() {
           />
         </div>
 
-        <div>
+        <div className="citeface-auth-field">
           <label htmlFor="confirmPassword">Confirm new password</label>
           <input
             id="confirmPassword"
@@ -103,18 +102,19 @@ function ResetPassword() {
         </div>
 
         {message && (
-          <p role="status" aria-live="polite">
+          <p className="citeface-auth-message citeface-auth-message--success" role="status" aria-live="polite">
             {message}
           </p>
         )}
 
         {error && (
-          <p role="alert" aria-live="polite">
+          <p className="citeface-auth-message citeface-auth-message--error" role="alert" aria-live="polite">
             {error}
           </p>
         )}
 
         <button
+          className="citeface-auth-submit"
           type="submit"
           disabled={submitting || !token || Boolean(message)}
         >
@@ -122,14 +122,14 @@ function ResetPassword() {
         </button>
       </form>
 
-      <p>
+      <p className="citeface-auth-footer">
         <Link to="/forgot-password">Request another reset link</Link>
       </p>
 
-      <p>
+      <p className="citeface-auth-footer">
         <Link to="/login">Return to sign in</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 

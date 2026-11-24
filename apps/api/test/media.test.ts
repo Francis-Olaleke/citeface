@@ -863,6 +863,43 @@ describe("F-08 Cloudinary media lifecycle", () => {
     },
   );
 
+  it("requests Cloudinary media metadata when verifying video duration", async () => {
+    const { auth, response } = await createIntent("video/mp4", 1024 * 1024);
+    const intent = response.json();
+
+    cloudinaryMock.api.resource.mockImplementation(
+      async (
+        publicId: string,
+        options: { media_metadata?: boolean },
+      ) => ({
+        public_id: publicId,
+        resource_type: "video",
+        type: "authenticated",
+        format: "mp4",
+        bytes: 1024 * 1024,
+        ...(options.media_metadata ? { duration: 125 } : {}),
+      }),
+    );
+
+    const completion = await app.inject({
+      method: "POST",
+      url: `/media/${intent.mediaId}/complete`,
+      cookies: auth.cookie,
+      payload: {},
+    });
+
+    expect(completion.statusCode).toBe(200);
+    expect(completion.json().status).toBe("PROCESSING");
+    expect(cloudinaryMock.api.resource).toHaveBeenCalledWith(
+      intent.publicId,
+      expect.objectContaining({
+        resource_type: "video",
+        type: "authenticated",
+        media_metadata: true,
+      }),
+    );
+  });
+
   it.each([90, 300, 301])(
     "accepts a video with duration %i seconds into PROCESSING",
     async (duration) => {

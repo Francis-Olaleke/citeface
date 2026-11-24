@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../components/AuthLayout";
 
 function Register() {
   const [displayName, setDisplayName] = useState("");
@@ -49,15 +50,13 @@ function Register() {
   }
 
   return (
-    <main>
-      <h1>Join Citeface</h1>
-      <p>Research. Connect. Discover.</p>
-
-      <h2>Create your account</h2>
-      <p>Join a community where research meets connection.</p>
-
-      <form onSubmit={handleSubmit}>
-        <div>
+    <AuthLayout
+      eyebrow="Join the community"
+      title="Create your account"
+      description="Build your researcher profile and share your work with the people it can reach."
+    >
+      <form className="citeface-auth-form" onSubmit={handleSubmit}>
+        <div className="citeface-auth-field">
           <label htmlFor="displayName">Full name</label>
           <input
             id="displayName"
@@ -72,7 +71,7 @@ function Register() {
           />
         </div>
 
-        <div>
+        <div className="citeface-auth-field">
           <label htmlFor="username">Username</label>
           <input
             id="username"
@@ -88,7 +87,7 @@ function Register() {
           />
         </div>
 
-        <div>
+        <div className="citeface-auth-field">
           <label htmlFor="email">Email address</label>
           <input
             id="email"
@@ -102,7 +101,7 @@ function Register() {
           />
         </div>
 
-        <div>
+        <div className="citeface-auth-field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
@@ -117,7 +116,7 @@ function Register() {
           />
         </div>
 
-        <div>
+        <div className="citeface-auth-field">
           <label htmlFor="confirmPassword">Confirm password</label>
           <input
             id="confirmPassword"
@@ -132,20 +131,20 @@ function Register() {
         </div>
 
         {error && (
-          <p role="alert" aria-live="polite">
+          <p className="citeface-auth-message citeface-auth-message--error" role="alert" aria-live="polite">
             {error}
           </p>
         )}
 
-        <button type="submit" disabled={submitting}>
+        <button className="citeface-auth-submit" type="submit" disabled={submitting}>
           {submitting ? "Creating account..." : "Create account"}
         </button>
       </form>
 
-      <p>
+      <p className="citeface-auth-footer">
         Already have an account? <Link to="/login">Sign in</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 

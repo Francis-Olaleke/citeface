@@ -13,7 +13,7 @@
 }
 
 .research-editor-eyebrow {
-  color: #2563eb;
+  color: var(--cf-blue);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -66,8 +66,8 @@
 .research-editor-field input:focus,
 .research-editor-field textarea:focus,
 .research-editor-field select:focus {
-  outline: 2px solid #bfdbfe;
-  border-color: #2563eb;
+  outline: 2px solid var(--cf-focus);
+  border-color: var(--cf-blue);
 }
 
 .research-editor-field textarea {
@@ -118,7 +118,7 @@
 }
 
 .research-editor-save {
-  background: #2563eb;
+  background: var(--cf-blue);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -199,7 +199,7 @@
   height: 16px;
   flex-shrink: 0;
   margin-top: 4px;
-  accent-color: #2563eb;
+  accent-color: var(--cf-blue);
 }
 
 .publish-add-author {
@@ -209,7 +209,7 @@
 .publish-attestation {
   padding: 18px;
   margin-top: 28px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--cf-border-strong);
   border-radius: 10px;
   background: #eff6ff;
 }

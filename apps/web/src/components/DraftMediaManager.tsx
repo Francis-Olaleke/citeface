@@ -330,6 +330,10 @@ export default function DraftMediaManager({
         <ul className="draft-media-list">
           {attachments.map((attachment) => {
             const isReady = attachment.media.status === "READY";
+            const canPreview =
+              isReady ||
+              (attachment.media.type === "VIDEO" &&
+                attachment.media.status === "PROCESSING");
 
             return (
               <li key={attachment.id}>
@@ -352,7 +356,7 @@ export default function DraftMediaManager({
                     removingId !== null
                   }
                 />
-                {isReady &&
+                {canPreview &&
                   attachment.media.deliveryUrl &&
                   !previewErrors[attachment.id] && (
                   attachment.media.type === "VIDEO" ? (
@@ -420,13 +424,11 @@ export default function DraftMediaManager({
                       upload it again.
                     </p>
                   )}
-                  {isReady &&
-                    (!attachment.media.deliveryUrl ||
-                      previewErrors[attachment.id]) && (
+                  {previewErrors[attachment.id] && (
                       <p className="draft-media-error" role="status">
-                        The media is ready, but its preview could not be loaded.
-                        Refresh the attachment status or remove and upload it
-                        again.
+                        {isReady
+                          ? "The media is ready, but its preview could not be loaded. Refresh the attachment status or remove and upload it again."
+                          : "The video preview is not available yet. It is still processing; refresh the attachment status later."}
                       </p>
                     )}
                   {confirmRemoveId === attachment.id ? (

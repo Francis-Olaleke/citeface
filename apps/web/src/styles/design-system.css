@@ -1,5 +1,5 @@
 /* ==========================================================
-   CITEFACE DESIGN SYSTEM v1
+   CITEFACE DESIGN SYSTEM v2 — Citation Spectrum
    Shared visual foundation — Research. Connect. Discover.
    ========================================================== */
 
@@ -8,7 +8,7 @@
 
   /* Typography */
   --cf-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --cf-font-display: "Manrope", "Inter", sans-serif;
+  --cf-font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --cf-text-xs: 0.75rem;
   --cf-text-sm: 0.875rem;
@@ -20,42 +20,42 @@
   --cf-text-4xl: clamp(2.5rem, 5vw, 3.5rem);
 
   /* Citeface core identity */
-  --cf-blue: #2457E6;
-  --cf-blue-dark: #173FC2;
-  --cf-blue-deep: #142B68;
-  --cf-orange: #F27A35;
-  --cf-orange-dark: #D85C1D;
+  --cf-blue: #246BDF;
+  --cf-blue-dark: #1D55BB;
+  --cf-blue-deep: #17315B;
+  --cf-orange: #F0922E;
+  --cf-orange-dark: #B85F0D;
 
   /* Supporting colour family */
-  --cf-teal: #119D98;
-  --cf-coral: #EF6475;
-  --cf-violet: #8065D9;
-  --cf-sky: #48A8E8;
+  --cf-teal: #238F84;
+  --cf-coral: #E36B50;
+  --cf-violet: #7654D8;
+  --cf-sky: #4F96EC;
 
   /* Text */
-  --cf-ink: #172449;
-  --cf-text: #34415F;
-  --cf-muted: #687590;
-  --cf-subtle: #8994AA;
+  --cf-ink: #1B2A41;
+  --cf-text: #46566E;
+  --cf-muted: #6C7A90;
+  --cf-subtle: #8E9BB0;
 
   /* Surfaces */
-  --cf-background: #F4F6FC;
+  --cf-background: #F5F8FD;
   --cf-surface: #FFFFFF;
-  --cf-surface-soft: #F8F9FF;
-  --cf-surface-blue: #EDF2FF;
-  --cf-surface-orange: #FFF2E9;
-  --cf-surface-teal: #E8F8F6;
-  --cf-surface-violet: #F2EEFF;
+  --cf-surface-soft: #F8FAFE;
+  --cf-surface-blue: #EAF2FF;
+  --cf-surface-orange: #FFF3E5;
+  --cf-surface-teal: #E9F6F2;
+  --cf-surface-violet: #F1EDFE;
 
   /* Borders and interaction */
-  --cf-border: #E1E7F2;
-  --cf-border-strong: #CBD5E7;
-  --cf-focus: rgba(36, 87, 230, 0.28);
+  --cf-border: #E2E9F3;
+  --cf-border-strong: #CBD8E9;
+  --cf-focus: rgba(36, 107, 223, 0.24);
 
   /* Elevation */
-  --cf-shadow-sm: 0 2px 8px rgba(23, 36, 73, 0.05);
-  --cf-shadow-md: 0 10px 30px rgba(23, 36, 73, 0.08);
-  --cf-shadow-lg: 0 20px 50px rgba(23, 36, 73, 0.12);
+  --cf-shadow-sm: 0 2px 8px rgba(23, 49, 91, 0.05);
+  --cf-shadow-md: 0 10px 30px rgba(23, 49, 91, 0.08);
+  --cf-shadow-lg: 0 20px 50px rgba(23, 49, 91, 0.12);
 
   /* Shape and spacing */
   --cf-radius-sm: 10px;
@@ -105,8 +105,9 @@ body {
   line-height: 1.65;
   color: var(--cf-ink);
   background:
-    radial-gradient(ellipse at 5% 0%, rgba(36, 87, 230, 0.085), transparent 34%),
-    radial-gradient(ellipse at 96% 5%, rgba(242, 122, 53, 0.09), transparent 30%),
+    radial-gradient(ellipse at 5% 0%, rgba(36, 107, 223, 0.075), transparent 34%),
+    radial-gradient(ellipse at 96% 5%, rgba(240, 146, 46, 0.08), transparent 30%),
+    radial-gradient(ellipse at 50% 100%, rgba(118, 84, 216, 0.035), transparent 40%),
     var(--cf-background);
 }
 
@@ -164,16 +165,17 @@ a {
 }
 
 /* ==========================================================
-   CITEFACE UI/UX REFINEMENT v1
+   CITEFACE PRODUCT EXPERIENCE v2
    Shared responsive experience across core product screens.
    ========================================================== */
 
 /* Global surfaces and interaction */
 body {
   background:
-    radial-gradient(ellipse at 4% 2%, rgba(36, 87, 230, 0.10), transparent 32%),
-    radial-gradient(ellipse at 96% 8%, rgba(242, 122, 53, 0.11), transparent 28%),
-    linear-gradient(180deg, #F7F8FE 0%, #F1F4FC 100%);
+    radial-gradient(ellipse at 4% 2%, rgba(36, 107, 223, 0.09), transparent 32%),
+    radial-gradient(ellipse at 96% 8%, rgba(240, 146, 46, 0.09), transparent 28%),
+    radial-gradient(ellipse at 50% 100%, rgba(118, 84, 216, 0.04), transparent 40%),
+    linear-gradient(180deg, #FAFCFF 0%, #F3F7FD 100%);
 }
 
 a {
@@ -307,7 +309,7 @@ select {
 
 .nav-item.active {
   color: var(--cf-blue);
-  background: linear-gradient(105deg, #EAF0FF, #F2F4FF);
+  background: linear-gradient(105deg, var(--cf-surface-blue), #F7F3FB);
   box-shadow: inset 3px 0 0 var(--cf-blue);
   font-weight: 800;
 }
@@ -319,7 +321,7 @@ select {
 .sidebar-note {
   padding: 15px;
   color: #596987;
-  background: linear-gradient(135deg, #EEF3FF, #FFF3EA);
+  background: linear-gradient(135deg, var(--cf-surface-blue), var(--cf-surface-orange));
   border: 1px solid #E6EAF8;
   border-radius: 14px;
   font-size: 12px;
@@ -477,8 +479,8 @@ select {
 .story-classification,
 .story-media-type {
   padding: 6px 11px;
-  color: #3156B5;
-  background: #EDF2FF;
+  color: var(--cf-blue-dark);
+  background: var(--cf-surface-blue);
   border: 1px solid #DCE5FF;
   border-radius: var(--cf-radius-pill);
   font-size: 11px;
@@ -523,8 +525,8 @@ select {
 }
 
 .story-topic:nth-child(4n + 1) {
-  color: #3156B5;
-  background: #EDF2FF;
+  color: var(--cf-blue-dark);
+  background: var(--cf-surface-blue);
   border-color: #DCE5FF;
 }
 
@@ -584,7 +586,7 @@ select {
 .feed-retry-button {
   padding: 11px 20px;
   color: #FFFFFF;
-  background: linear-gradient(110deg, var(--cf-blue), #4779F1);
+  background: linear-gradient(110deg, var(--cf-blue-dark), var(--cf-blue));
   border-radius: var(--cf-radius-pill);
   box-shadow: 0 5px 13px rgba(36, 87, 230, 0.19);
   font-weight: 700;
@@ -614,8 +616,8 @@ select {
 
 .topic-tag {
   padding: 7px 11px;
-  color: #3156B5;
-  background: #EDF2FF;
+  color: var(--cf-blue-dark);
+  background: var(--cf-surface-blue);
   border: 1px solid #DCE5FF;
   border-radius: var(--cf-radius-pill);
   font-size: 11px;
@@ -668,7 +670,7 @@ select {
 }
 
 .researcher-cover {
-  background: linear-gradient(115deg, #173FC2 0%, #3974E9 48%, #F18A35 100%);
+  background: linear-gradient(115deg, var(--cf-blue-dark) 0%, var(--cf-violet) 48%, var(--cf-orange) 100%);
 }
 
 .researcher-identity {
@@ -741,8 +743,8 @@ select {
 }
 
 .researcher-story-classification {
-  color: #3156B5;
-  background: #EDF2FF;
+  color: var(--cf-blue-dark);
+  background: var(--cf-surface-blue);
   border-radius: var(--cf-radius-pill);
   font-weight: 700;
 }
@@ -759,7 +761,7 @@ select {
 .researcher-state button {
   padding: 10px 16px;
   color: var(--cf-blue);
-  background: #EDF2FF;
+  background: var(--cf-surface-blue);
   border: 1px solid #DCE5FF;
   border-radius: var(--cf-radius-pill);
   font-weight: 700;
@@ -801,8 +803,8 @@ select {
 }
 
 .detail-classification {
-  color: #3156B5;
-  background: #EDF2FF;
+  color: var(--cf-blue-dark);
+  background: var(--cf-surface-blue);
   border: 1px solid #DCE5FF;
   border-radius: var(--cf-radius-pill);
   font-weight: 700;
@@ -841,8 +843,8 @@ select {
 
 .detail-topics span {
   padding: 7px 12px;
-  color: #3156B5;
-  background: #EDF2FF;
+  color: var(--cf-blue-dark);
+  background: var(--cf-surface-blue);
   border-radius: var(--cf-radius-pill);
   font-size: 12px;
   font-weight: 700;

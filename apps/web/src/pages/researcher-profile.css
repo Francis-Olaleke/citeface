@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: #185adb;
+  color: var(--cf-blue);
   text-decoration: none;
   font-size: 21px;
   font-weight: 750;
@@ -33,7 +33,7 @@
 
 .researcher-discover-link,
 .researcher-links a {
-  color: #2459a6;
+  color: var(--cf-blue-dark);
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
@@ -65,7 +65,7 @@
 
 .researcher-cover {
   height: 170px;
-  background: linear-gradient(120deg, #185adb, #8caef1);
+  background: linear-gradient(120deg, var(--cf-blue-dark), var(--cf-violet) 55%, var(--cf-orange));
   background-position: center;
   background-size: cover;
 }
@@ -89,7 +89,7 @@
   overflow: hidden;
   border: 5px solid #fff;
   border-radius: 50%;
-  background: #185adb;
+  background: var(--cf-blue);
   color: #fff;
   font-size: 30px;
   font-weight: 700;
@@ -128,8 +128,8 @@
   width: 19px;
   height: 19px;
   border-radius: 50%;
-  background: #eaf2ff;
-  color: #2864c5;
+  background: var(--cf-surface-teal);
+  color: var(--cf-teal);
   font-size: 12px;
   font-weight: 700;
 }
@@ -244,7 +244,7 @@
 }
 
 .researcher-story h3 a {
-  color: #185adb;
+  color: var(--cf-blue);
   text-decoration: none;
 }
 
@@ -292,7 +292,7 @@
 }
 
 .researcher-affiliation a:hover {
-  color: #185adb;
+  color: var(--cf-blue);
   text-decoration: underline;
 }
 
@@ -302,7 +302,7 @@
 }
 
 .researcher-primary-label {
-  color: #2864c5 !important;
+  color: var(--cf-teal) !important;
   font-weight: 650;
 }
 
@@ -330,7 +330,7 @@
   border: 1px solid #dfe5ef;
   border-radius: 8px;
   background: #fff;
-  color: #2459a6;
+  color: var(--cf-blue-dark);
   font-weight: 600;
   cursor: pointer;
 }
@@ -355,7 +355,7 @@
 .researcher-state a {
   display: inline-block;
   margin: 8px;
-  color: #2459a6;
+  color: var(--cf-blue-dark);
 }
 
 @media (max-width: 760px) {

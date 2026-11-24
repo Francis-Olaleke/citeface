@@ -99,6 +99,7 @@ export type ResearchClassification =
 export interface StoriesFeedFilters {
   q?: string;
   classification?: ResearchClassification | "";
+  topic?: string;
 }
 
 export async function getStoriesFeed(
@@ -117,6 +118,10 @@ export async function getStoriesFeed(
 
   if (filters.classification) {
     params.set("classification", filters.classification);
+  }
+
+  if (filters.topic?.trim()) {
+    params.set("topic", filters.topic.trim());
   }
 
   const response = await fetch(

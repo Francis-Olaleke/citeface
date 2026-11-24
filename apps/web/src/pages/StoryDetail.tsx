@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import CitefaceBrand from "../components/CitefaceBrand";
 
 import {
   getPublicStory,
@@ -118,9 +119,8 @@ function StoryDetail() {
   return (
     <div className="story-detail-page">
       <header className="detail-topbar">
-        <Link className="detail-brand" to="/">
-          <span>Citeface</span>
-          <small>Research. Connect. Discover.</small>
+        <Link className="citeface-brand-link" to="/" aria-label="Citeface home">
+          <CitefaceBrand />
         </Link>
 
         <Link className="detail-back-link" to="/">

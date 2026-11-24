@@ -13,7 +13,7 @@
 }
 
 .cf-toast {
-  --cf-toast-accent: #2457e6;
+  --cf-toast-accent: var(--cf-blue);
 
   position: relative;
   display: flex;
@@ -40,7 +40,7 @@
 }
 
 .cf-toast--info {
-  --cf-toast-accent: #2457e6;
+  --cf-toast-accent: var(--cf-blue);
 }
 
 .cf-toast__symbol {

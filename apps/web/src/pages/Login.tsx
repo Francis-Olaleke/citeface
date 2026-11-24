@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../components/AuthLayout";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -38,15 +39,14 @@ function Login() {
   }
 
   return (
-    <main>
-      <h1>Welcome back to Citeface</h1>
-      <p>Research. Connect. Discover.</p>
-
-      <h2>Sign in to your account</h2>
-      <p>Continue discovering and connecting with research.</p>
-
-      <form onSubmit={handleSubmit}>
-        <div>
+    <AuthLayout
+      eyebrow="Welcome back"
+      title="Sign in to Citeface"
+      description="Pick up where your research conversations left off."
+      variant="login"
+    >
+      <form className="citeface-auth-form" onSubmit={handleSubmit}>
+        <div className="citeface-auth-field">
           <label htmlFor="email">Email address</label>
           <input
             id="email"
@@ -60,7 +60,7 @@ function Login() {
           />
         </div>
 
-        <div>
+        <div className="citeface-auth-field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
@@ -74,25 +74,25 @@ function Login() {
           />
         </div>
 
-                <p>
+        <p className="citeface-auth-forgot">
           <Link to="/forgot-password">Forgot password?</Link>
         </p>
 
         {error && (
-          <p role="alert" aria-live="polite">
+          <p className="citeface-auth-message citeface-auth-message--error" role="alert" aria-live="polite">
             {error}
           </p>
         )}
 
-        <button type="submit" disabled={submitting}>
+        <button className="citeface-auth-submit" type="submit" disabled={submitting}>
           {submitting ? "Signing in..." : "Sign in"}
         </button>
       </form>
 
-      <p>
+      <p className="citeface-auth-footer">
         Don't have an account? <Link to="/register">Create an account</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 
