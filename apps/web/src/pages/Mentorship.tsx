@@ -6,6 +6,7 @@ import {
   createMentorOffering,
   getMentorOfferings,
   requestMentorship,
+  startStripeOnboarding,
   type MentorOffering,
 } from "../services/mentorship";
 import "./mentorship.css";
@@ -21,6 +22,10 @@ export default function Mentorship() {
   const [error, setError] = useState<string | null>(null);
   const [expertise, setExpertise] = useState("");
   const [description, setDescription] = useState("");
+  const [serviceType, setServiceType] = useState<"MENTORSHIP" | "TUTORING" | "TEACHING" | "CONSULTING" | "RESEARCH_ADVICE">("MENTORSHIP");
+  const [priceMinor, setPriceMinor] = useState(0);
+  const [currency, setCurrency] = useState("USD");
+  const [durationMinutes, setDurationMinutes] = useState(60);
   const [requestFor, setRequestFor] = useState<string | null>(null);
   const [requestMessage, setRequestMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,7 +50,7 @@ export default function Mentorship() {
     setBusy(true);
     setError(null);
     try {
-      await createMentorOffering(expertise, description);
+      await createMentorOffering(expertise, description, serviceType, priceMinor, currency, durationMinutes);
       setExpertise("");
       setDescription("");
       await load();
@@ -95,6 +100,33 @@ export default function Mentorship() {
             <input id="mentor-expertise" value={expertise} onChange={(event) => setExpertise(event.target.value)} placeholder="e.g. PhD applications, genomics, academic writing" maxLength={150} />
             <label htmlFor="mentor-description">How can you help?</label>
             <textarea id="mentor-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the guidance, schedule or topics you can support." rows={4} maxLength={3000} />
+            <label htmlFor="mentor-service">Service type</label>
+            <select id="mentor-service" value={serviceType} onChange={(event) => setServiceType(event.target.value as typeof serviceType)}>
+              <option value="MENTORSHIP">Mentorship</option>
+              <option value="TUTORING">Tutoring</option>
+              <option value="TEACHING">Teaching</option>
+              <option value="CONSULTING">Consulting</option>
+              <option value="RESEARCH_ADVICE">Research advice</option>
+            </select>
+            <div className="mentorship-pricing-grid">
+              <label>Price (minor units)<input type="number" min={0} max={100000000} value={priceMinor} onChange={(event) => setPriceMinor(Number(event.target.value) || 0)} /></label>
+              <label>Currency<input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase().slice(0, 3))} maxLength={3} /></label>
+              <label>Duration (minutes)<input type="number" min={15} max={480} value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value) || 60)} /></label>
+            </div>
+            <button
+              type="button"
+              className="mentorship-stripe-button"
+              onClick={async () => {
+                try {
+                  const url = await startStripeOnboarding();
+                  window.location.assign(url);
+                } catch (onboardingError) {
+                  setError(onboardingError instanceof Error ? onboardingError.message : "Unable to start Stripe onboarding.");
+                }
+              }}
+            >
+              Set up Stripe payouts
+            </button>
             <button type="submit" disabled={busy || !expertise.trim() || !description.trim()}>
               Publish offering
             </button>
@@ -127,6 +159,12 @@ export default function Mentorship() {
                     {profile?.headline && <p className="mentor-headline">{profile.headline}</p>}
                     {profile?.country && <p className="mentor-country">{profile.country}</p>}
                     <span className="mentor-expertise">{offering.expertise}</span>
+                    {offering.priceMinor > 0 && (
+                      <span className="mentor-price">
+                        {(offering.priceMinor / 100).toLocaleString(undefined, { style: "currency", currency: offering.currency })}
+                        {" · "}{offering.durationMinutes} min · {offering.serviceType.toLowerCase().replace("_", " ")}
+                      </span>
+                    )}
                     <p className="mentor-description">{offering.description}</p>
                     {!ownOffering && (
                       <button type="button" onClick={() => setRequestFor(offering.id)}>Request mentorship</button>

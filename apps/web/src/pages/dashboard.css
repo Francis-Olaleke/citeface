@@ -451,6 +451,19 @@ input:disabled {
   line-height: 1.6;
 }
 
+.profile-credibility-link {
+  display: inline-flex;
+  margin-top: 8px;
+  color: var(--cf-blue-dark);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.profile-credibility-link:hover {
+  text-decoration: underline;
+}
+
 .dashboard-error {
   width: min(600px, 92%);
   margin: 15px auto;

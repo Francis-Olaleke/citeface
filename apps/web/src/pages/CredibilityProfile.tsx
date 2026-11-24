@@ -47,6 +47,7 @@ export default function CredibilityProfile() {
   const [citationCount, setCitationCount] = useState(0);
   const [specializations, setSpecializations] = useState("");
   const [education, setEducation] = useState("");
+  const [institutionAffiliations, setInstitutionAffiliations] = useState("");
   const [grants, setGrants] = useState("");
   const [fellowships, setFellowships] = useState("");
   const [professionalBodies, setProfessionalBodies] = useState("");
@@ -74,6 +75,7 @@ export default function CredibilityProfile() {
           setCitationCount(profile.citationCount ?? 0);
           setSpecializations(toComma(profile.specializations));
           setEducation(toLines(profile.education, ["institution", "degree", "year"]));
+          setInstitutionAffiliations(toLines(profile.institutionAffiliations, ["institution", "role", "startYear", "endYear"]));
           setGrants(toLines(profile.grants, ["title", "funder", "year"]));
           setFellowships(toLines(profile.fellowships, ["title", "organization", "year"]));
           setProfessionalBodies(toLines(profile.professionalBodies, ["name", "role"]));
@@ -105,6 +107,7 @@ export default function CredibilityProfile() {
       citationCount,
       specializations: specializations.split(",").map((item) => item.trim()).filter(Boolean),
       education: linesToRecords(education, ["institution", "degree", "year"]),
+      institutionAffiliations: linesToRecords(institutionAffiliations, ["institution", "role", "startYear", "endYear"]),
       grants: linesToRecords(grants, ["title", "funder", "year"]),
       fellowships: linesToRecords(fellowships, ["title", "organization", "year"]),
       professionalBodies: linesToRecords(professionalBodies, ["name", "role"]),
@@ -162,6 +165,7 @@ export default function CredibilityProfile() {
             <section className="credibility-section">
               <h2>Schools and institutional affiliations</h2>
               <label>Education and degrees<textarea value={education} onChange={(event) => setEducation(event.target.value)} rows={5} placeholder={"University of Oxford | DPhil Microbiology | 2018\nHarvard University | MSc Epidemiology | 2014"} /><small>One entry per line: Institution | Degree | Year</small></label>
+              <label>Current and past institutional affiliations<textarea value={institutionAffiliations} onChange={(event) => setInstitutionAffiliations(event.target.value)} rows={5} placeholder={"University of Lagos | Professor | 2020 | Present"} /><small>Institution | Role | Start year | End year</small></label>
             </section>
 
             <section className="credibility-section">

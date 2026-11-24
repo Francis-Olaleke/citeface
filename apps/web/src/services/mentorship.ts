@@ -1,7 +1,11 @@
 export interface MentorOffering {
   id: string;
+  serviceType: "MENTORSHIP" | "TUTORING" | "TEACHING" | "CONSULTING" | "RESEARCH_ADVICE";
   expertise: string;
   description: string;
+  priceMinor: number;
+  currency: string;
+  durationMinutes: number;
   isActive: boolean;
   mentor: {
     id: string;
@@ -40,12 +44,19 @@ export async function getMentorOfferings(): Promise<MentorOffering[]> {
   return (data.offerings as MentorOffering[]) ?? [];
 }
 
-export async function createMentorOffering(expertise: string, description: string) {
+export async function createMentorOffering(
+  expertise: string,
+  description: string,
+  serviceType: "MENTORSHIP" | "TUTORING" | "TEACHING" | "CONSULTING" | "RESEARCH_ADVICE",
+  priceMinor: number,
+  currency: string,
+  durationMinutes: number,
+) {
   const response = await fetch("/api/mentorship/offerings", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ expertise, description }),
+    body: JSON.stringify({ expertise, description, serviceType, priceMinor, currency, durationMinutes }),
   });
   const data = await payload(response);
   if (!response.ok) throw new Error(message(data, "Unable to publish your mentoring offer."));
@@ -62,4 +73,24 @@ export async function requestMentorship(offeringId: string, requestMessage: stri
   const data = await payload(response);
   if (!response.ok) throw new Error(message(data, "Unable to request mentorship."));
   return data;
+}
+
+export async function startStripeOnboarding(): Promise<string> {
+  const response = await fetch("/api/mentorship/stripe/onboarding", {
+    method: "POST",
+    credentials: "include",
+  });
+  const data = await payload(response);
+  if (!response.ok) throw new Error(message(data, "Unable to start Stripe onboarding."));
+  return data.url as string;
+}
+
+export async function startMentorshipCheckout(requestId: string): Promise<string> {
+  const response = await fetch(`/api/mentorship/requests/${encodeURIComponent(requestId)}/checkout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const data = await payload(response);
+  if (!response.ok) throw new Error(message(data, "Unable to start checkout."));
+  return data.url as string;
 }

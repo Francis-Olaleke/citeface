@@ -265,6 +265,16 @@ function ResearcherProfile() {
                     Website
                   </a>
                 )}
+                {profile?.linkedinUrl && (
+                  <a href={profile.linkedinUrl} target="_blank" rel="noreferrer">
+                    LinkedIn
+                  </a>
+                )}
+                {profile?.googleScholarUrl && (
+                  <a href={profile.googleScholarUrl} target="_blank" rel="noreferrer">
+                    Google Scholar
+                  </a>
+                )}
                 {orcid && (
                   <a href={orcid} target="_blank" rel="noreferrer">
                     ORCID
@@ -310,6 +320,84 @@ function ResearcherProfile() {
                     </p>
                   )}
                 </section>
+
+                {(profile?.specializations?.length ||
+                  profile?.education?.length ||
+                  profile?.institutionAffiliations?.length ||
+                  profile?.grants?.length ||
+                  profile?.fellowships?.length ||
+                  profile?.professionalBodies?.length ||
+                  profile?.citationCount) && (
+                  <section className="researcher-panel">
+                    <h2>Academic credentials</h2>
+                    {profile.citationCount > 0 && (
+                      <div className="researcher-credential-stat">
+                        <strong>{profile.citationCount.toLocaleString()}</strong>
+                        <span>Citations</span>
+                      </div>
+                    )}
+                    {profile.specializations?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Areas of specialization</h3>
+                        <div className="researcher-credential-tags">
+                          {profile.specializations.map((item) => (
+                            <span key={item}>{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.education?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Education and institutional affiliations</h3>
+                        {profile.education.map((item, index) => (
+                          <p key={`${item.institution}-${index}`}>
+                            {[item.degree, item.institution, item.year].filter(Boolean).join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {profile.institutionAffiliations?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Institutional affiliations</h3>
+                        {profile.institutionAffiliations.map((item, index) => (
+                          <p key={`${item.institution}-${index}`}>
+                            {[item.role, item.institution, item.startYear, item.endYear].filter(Boolean).join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {profile.grants?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Grants</h3>
+                        {profile.grants.map((item, index) => (
+                          <p key={`${item.title}-${index}`}>
+                            {[item.title, item.funder, item.year].filter(Boolean).join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {profile.fellowships?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Fellowships</h3>
+                        {profile.fellowships.map((item, index) => (
+                          <p key={`${item.title}-${index}`}>
+                            {[item.title, item.organization, item.year].filter(Boolean).join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {profile.professionalBodies?.length > 0 && (
+                      <div className="researcher-credential-block">
+                        <h3>Professional bodies</h3>
+                        {profile.professionalBodies.map((item, index) => (
+                          <p key={`${item.name}-${index}`}>
+                            {[item.name, item.role].filter(Boolean).join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
 
                 <section className="researcher-panel">
                   <div className="researcher-section-heading">

@@ -52,6 +52,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
       citationCount?: number;
       specializations?: string[];
       education?: Array<Record<string, unknown>>;
+      institutionAffiliations?: Array<Record<string, unknown>>;
       grants?: Array<Record<string, unknown>>;
       fellowships?: Array<Record<string, unknown>>;
       professionalBodies?: Array<Record<string, unknown>>;
@@ -75,6 +76,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
             citationCount: { type: "integer", minimum: 0, maximum: 100000000 },
             specializations: { type: "array", maxItems: 30, items: { type: "string", maxLength: 100 } },
             education: { type: "array", maxItems: 20, items: { type: "object" } },
+            institutionAffiliations: { type: "array", maxItems: 30, items: { type: "object" } },
             grants: { type: "array", maxItems: 50, items: { type: "object" } },
             fellowships: { type: "array", maxItems: 50, items: { type: "object" } },
             professionalBodies: { type: "array", maxItems: 50, items: { type: "object" } },
@@ -107,6 +109,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
           citationCount: body.citationCount ?? 0,
           specializations: body.specializations ?? [],
           education: body.education ?? [],
+          institutionAffiliations: body.institutionAffiliations ?? [],
           grants: body.grants ?? [],
           fellowships: body.fellowships ?? [],
           professionalBodies: body.professionalBodies ?? [],
@@ -123,6 +126,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
           citationCount: body.citationCount ?? 0,
           specializations: body.specializations ?? [],
           education: body.education ?? [],
+          institutionAffiliations: body.institutionAffiliations ?? [],
           grants: body.grants ?? [],
           fellowships: body.fellowships ?? [],
           professionalBodies: body.professionalBodies ?? [],
@@ -583,6 +587,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
               citationCount: true,
               specializations: true,
               education: true,
+              institutionAffiliations: true,
               grants: true,
               fellowships: true,
               professionalBodies: true,

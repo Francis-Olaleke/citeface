@@ -271,6 +271,11 @@ model ResearcherProfile {
   citationCount   Int      @default(0)
   specializations Json?    @db.JsonB
   education       Json?    @db.JsonB
+  institutionAffiliations Json? @db.JsonB
+  careerStage       String?
+  professionalRanks Json?    @db.JsonB
+  researchInterests Json?    @db.JsonB
+  researchGoal      String?  @db.Text
   grants          Json?    @db.JsonB
   fellowships     Json?    @db.JsonB
   professionalBodies Json? @db.JsonB

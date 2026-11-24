@@ -13,6 +13,12 @@
 .mentorship-compose form { display: grid; gap: 8px; }
 .mentorship-compose label { color: #667085; font-size: 12px; font-weight: 650; }
 .mentorship-compose input, .mentorship-compose textarea, .mentorship-dialog textarea { padding: 11px 12px; border: 1px solid #dfe6ef; border-radius: 9px; font: inherit; resize: vertical; }
+.mentorship-compose select { padding: 11px 12px; border: 1px solid #dfe6ef; border-radius: 9px; background: #fff; font: inherit; }
+.mentorship-pricing-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mentorship-pricing-grid label { display: grid; gap: 7px; color: #667085; font-size: 12px; font-weight: 650; }
+.mentorship-pricing-grid input { width: 100%; box-sizing: border-box; }
+.mentorship-stripe-button { justify-self: start; border: 1px solid #dfe6ef !important; background: #fff !important; color: var(--cf-blue-dark) !important; }
+.mentor-price { display: block; margin: 8px 0; color: #087969; font-size: 12px; font-weight: 700; }
 .mentorship-compose button, .mentor-card button, .mentorship-dialog button { border: 0; border-radius: 9px; background: var(--cf-blue); color: #fff; padding: 10px 14px; font-weight: 650; cursor: pointer; }
 .mentorship-compose button { justify-self: start; }
 .mentor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }

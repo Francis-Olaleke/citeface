@@ -16,6 +16,7 @@ export interface ResearcherProfileData {
     citationCount: number;
     specializations: string[];
     education: Array<{ institution?: string; degree?: string; year?: string }>;
+    institutionAffiliations: Array<{ institution?: string; role?: string; startYear?: string; endYear?: string }>;
     grants: Array<{ title?: string; funder?: string; year?: string }>;
     fellowships: Array<{ title?: string; organization?: string; year?: string }>;
     professionalBodies: Array<{ name?: string; role?: string }>;
@@ -235,6 +236,7 @@ export interface CredibilityProfilePayload {
   citationCount?: number;
   specializations?: string[];
   education?: Array<{ institution?: string; degree?: string; year?: string }>;
+  institutionAffiliations?: Array<{ institution?: string; role?: string; startYear?: string; endYear?: string }>;
   grants?: Array<{ title?: string; funder?: string; year?: string }>;
   fellowships?: Array<{ title?: string; organization?: string; year?: string }>;
   professionalBodies?: Array<{ name?: string; role?: string }>;

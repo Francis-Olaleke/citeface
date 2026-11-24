@@ -387,6 +387,57 @@
   color: var(--cf-blue-dark);
 }
 
+.researcher-credential-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: #26344a;
+}
+
+.researcher-credential-stat strong {
+  font-size: 22px;
+}
+
+.researcher-credential-stat span {
+  color: #778195;
+  font-size: 12px;
+}
+
+.researcher-credential-block {
+  margin-top: 14px;
+  border-top: 1px solid #eef2f7;
+  padding-top: 14px;
+}
+
+.researcher-credential-block h3 {
+  margin: 0 0 8px;
+  color: #48566b;
+  font-size: 13px;
+}
+
+.researcher-credential-block p {
+  margin: 5px 0;
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.researcher-credential-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.researcher-credential-tags span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #edf3ff;
+  color: var(--cf-blue-dark);
+  font-size: 11px;
+  font-weight: 650;
+}
+
 @media (max-width: 760px) {
   .researcher-content {
     grid-template-columns: 1fr;
