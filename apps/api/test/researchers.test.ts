@@ -69,8 +69,9 @@ beforeEach(async () => {
 });
 
 describe("F-08 researcher discovery and connections", () => {
-  it("lists only active researchers with published work and supports search", async () => {
+  it("lists active researchers with or without published work and supports search", async () => {
     const molecular = await createResearcher(1);
+    await createResearcher(3);
     const suspended = await createResearcher(2, { status: "SUSPENDED" });
 
     await prisma.researcherProfile.create({
@@ -96,6 +97,16 @@ describe("F-08 researcher discovery and connections", () => {
       publicationCount: 1,
       followerCount: 0,
     });
+
+    const directory = await app.inject({
+      method: "GET",
+      url: "/researchers",
+    });
+
+    expect(directory.statusCode).toBe(200);
+    expect(directory.json().researchers.map((item: { username: string }) => item.username))
+      .toEqual(["researcher3", "researcher1"]);
+    expect(directory.json().researchers[0].publicationCount).toBe(0);
   });
 
   it("allows an authenticated researcher to follow and unfollow another researcher", async () => {

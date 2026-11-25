@@ -251,7 +251,10 @@ export interface CredibilityProfilePayload {
 }
 
 export async function getMyCredibilityProfile(): Promise<{
-  profile: (CredibilityProfilePayload & { citationCount: number }) | null;
+  profile: (CredibilityProfilePayload & {
+    citationCount: number;
+    profileImageUrl: string | null;
+  }) | null;
   affiliations: unknown[];
 }> {
   const response = await fetch("/api/researchers/me/profile", {
@@ -263,7 +266,13 @@ export async function getMyCredibilityProfile(): Promise<{
     typeof data.error === "string" ? data.error : "Unable to load profile.",
     response.status,
   );
-  return data as { profile: (CredibilityProfilePayload & { citationCount: number }) | null; affiliations: unknown[] };
+  return data as {
+    profile: (CredibilityProfilePayload & {
+      citationCount: number;
+      profileImageUrl: string | null;
+    }) | null;
+    affiliations: unknown[];
+  };
 }
 
 export async function updateMyCredibilityProfile(payload: CredibilityProfilePayload) {
@@ -275,7 +284,11 @@ export async function updateMyCredibilityProfile(payload: CredibilityProfilePayl
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ResearcherServiceError(
-    typeof data.error === "string" ? data.error : "Unable to save profile.",
+    typeof data.error === "string"
+      ? data.error
+      : typeof data.message === "string"
+        ? data.message
+        : "Unable to save profile.",
     response.status,
   );
   return data.profile as CredibilityProfilePayload;

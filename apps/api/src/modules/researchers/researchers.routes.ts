@@ -76,7 +76,11 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
             websiteUrl: { type: "string", maxLength: 500 },
             linkedinUrl: { type: "string", maxLength: 500 },
             googleScholarUrl: { type: "string", maxLength: 500 },
-            orcidId: { type: "string", maxLength: 19, pattern: "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$" },
+            orcidId: {
+              type: "string",
+              maxLength: 19,
+              pattern: "^$|^\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$",
+            },
             citationCount: { type: "integer", minimum: 0, maximum: 100000000 },
             specializations: { type: "array", maxItems: 30, items: { type: "string", maxLength: 100 } },
             education: { type: "array", maxItems: 20, items: { type: "object" } },
@@ -102,6 +106,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const body = request.body;
+      const orcidId = body.orcidId?.trim() || null;
       const profile = await prisma.researcherProfile.upsert({
         where: { userId: user.id },
         create: {
@@ -113,7 +118,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
           websiteUrl: body.websiteUrl?.trim() || null,
           linkedinUrl: body.linkedinUrl?.trim() || null,
           googleScholarUrl: body.googleScholarUrl?.trim() || null,
-          orcidId: body.orcidId?.trim() || null,
+          orcidId,
           citationCount: body.citationCount ?? 0,
           specializations: body.specializations ?? [],
           education: body.education ?? [],
@@ -134,7 +139,7 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
           websiteUrl: body.websiteUrl?.trim() || null,
           linkedinUrl: body.linkedinUrl?.trim() || null,
           googleScholarUrl: body.googleScholarUrl?.trim() || null,
-          orcidId: body.orcidId?.trim() || null,
+          orcidId,
           citationCount: body.citationCount ?? 0,
           specializations: body.specializations ?? [],
           education: body.education ?? [],
@@ -193,15 +198,6 @@ const researchersRoutes: FastifyPluginAsync = async (app) => {
       const where = {
         status: "ACTIVE" as const,
         deletedAt: null,
-        createdStories: {
-          some: {
-            status: "PUBLISHED" as const,
-            publishedAt: { not: null },
-            deletedAt: null,
-            retractedAt: null,
-            retraction: { is: null },
-          },
-        },
         ...searchFilter,
       };
 

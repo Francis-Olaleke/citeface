@@ -9,6 +9,19 @@
 .credibility-form { display: grid; gap: 14px; }
 .credibility-section { padding: 20px; border: 1px solid #e8edf4; border-radius: 14px; background: #fff; }
 .credibility-section h2 { margin: 0 0 16px; font-size: 17px; }
+.credibility-photo-section { display: flex; align-items: center; gap: 18px; }
+.credibility-photo-preview { display: grid; flex: 0 0 96px; width: 96px; height: 96px; place-items: center; overflow: hidden; border-radius: 50%; background: #edf2f8; color: #667085; font-size: 12px; }
+.credibility-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.credibility-photo-controls h2 { margin: 0 0 5px; }
+.credibility-photo-controls p { margin: 0 0 12px; color: #667085; font-size: 13px; }
+.credibility-photo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.credibility-photo-upload { position: relative; overflow: hidden; border-radius: 8px; background: var(--cf-blue); color: #fff; padding: 9px 13px; font-size: 12px; font-weight: 650; cursor: pointer; }
+.credibility-photo-upload:focus-within { outline: 2px solid var(--cf-blue-dark); outline-offset: 3px; }
+.credibility-photo-upload input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.credibility-photo-upload.is-disabled { opacity: .6; cursor: wait; }
+.credibility-photo-remove { border: 0; background: transparent; color: #a83246; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.credibility-photo-remove:disabled { opacity: .6; cursor: wait; }
+.credibility-photo-actions small { flex-basis: 100%; }
 .credibility-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .credibility-grid label, .credibility-section > label { display: grid; gap: 7px; color: #48566b; font-size: 12px; font-weight: 650; }
 .credibility-grid input, .credibility-grid textarea, .credibility-section > label textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe6ef; border-radius: 9px; font: inherit; resize: vertical; }
@@ -28,7 +41,11 @@
 .credibility-success { background: #edf8f4; color: #087969; }
 .credibility-state { padding: 28px; border: 1px solid #e8edf4; border-radius: 14px; background: #fff; text-align: center; }
 @media (max-width: 720px) {
+  .credibility-photo-section { align-items: flex-start; }
   .credibility-grid { grid-template-columns: 1fr; }
   .credibility-span { grid-column: auto; }
   .credibility-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .credibility-photo-section { flex-direction: column; }
 }

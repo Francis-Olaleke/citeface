@@ -128,6 +128,19 @@ function ResearcherProfile() {
   const orcid = profile?.orcidId
     ? `https://orcid.org/${encodeURIComponent(profile.orcidId)}`
     : null;
+  const hasAcademicCredentials = Boolean(
+    profile?.specializations?.length ||
+      profile?.education?.length ||
+      profile?.institutionAffiliations?.length ||
+      profile?.grants?.length ||
+      profile?.fellowships?.length ||
+      profile?.professionalBodies?.length ||
+      profile?.careerStage ||
+      profile?.professionalRanks?.length ||
+      profile?.researchInterests?.length ||
+      profile?.researchGoal?.trim() ||
+      profile?.citationCount,
+  );
 
   async function handleFollowToggle() {
     if (!username || followingBusy) return;
@@ -176,8 +189,8 @@ function ResearcherProfile() {
         <Link className="citeface-brand-link" to="/" aria-label="Citeface home">
           <CitefaceBrand />
         </Link>
-        <Link className="researcher-discover-link" to="/">
-          Discover research
+        <Link className="researcher-discover-link" to="/network">
+          Discover researchers
         </Link>
       </header>
 
@@ -256,6 +269,15 @@ function ResearcherProfile() {
                         .join(", ")}
                     </p>
                   )}
+                  <p className="researcher-profile-stats">
+                    <a href="#researcher-activity">
+                      {followerCount} {followerCount === 1 ? "follower" : "followers"}
+                    </a>
+                    <span aria-hidden="true">·</span>
+                    <a href="#researcher-research">
+                      {data.pagination.total} {data.pagination.total === 1 ? "publication" : "publications"}
+                    </a>
+                  </p>
                 </div>
               </div>
 
@@ -311,12 +333,26 @@ function ResearcherProfile() {
                     Message
                   </button>
                 )}
+                {!user && (
+                  <Link className="researcher-follow-button" to="/login">
+                    Sign in to connect
+                  </Link>
+                )}
               </div>
             </section>
 
+            <nav className="researcher-section-nav" aria-label="Profile sections">
+              <a href="#researcher-about">About</a>
+              {hasAcademicCredentials && (
+                <a href="#researcher-credentials">Credentials</a>
+              )}
+              <a href="#researcher-research">Research</a>
+              <a href="#researcher-affiliations">Affiliations</a>
+            </nav>
+
             <div className="researcher-content">
               <div className="researcher-primary">
-                <section className="researcher-panel">
+                <section className="researcher-panel" id="researcher-about">
                   <h2>About</h2>
                   {profile?.biography?.trim() ? (
                     <p className="researcher-biography">
@@ -329,18 +365,8 @@ function ResearcherProfile() {
                   )}
                 </section>
 
-                {(profile?.specializations?.length ||
-                  profile?.education?.length ||
-                  profile?.institutionAffiliations?.length ||
-                  profile?.grants?.length ||
-                  profile?.fellowships?.length ||
-                  profile?.professionalBodies?.length ||
-                  profile?.careerStage ||
-                  profile?.professionalRanks?.length ||
-                  profile?.researchInterests?.length ||
-                  profile?.researchGoal?.trim() ||
-                  profile?.citationCount) && (
-                  <section className="researcher-panel">
+                {hasAcademicCredentials && (
+                  <section className="researcher-panel" id="researcher-credentials">
                     <h2>Academic credentials</h2>
                     {profile.careerStage && (
                       <div className="researcher-credential-block">
@@ -443,7 +469,7 @@ function ResearcherProfile() {
                   </section>
                 )}
 
-                <section className="researcher-panel">
+                <section className="researcher-panel" id="researcher-research">
                   <div className="researcher-section-heading">
                     <h2>Published research</h2>
                     <span>{data.pagination.total}</span>
@@ -517,7 +543,7 @@ function ResearcherProfile() {
               </div>
 
               <aside className="researcher-sidebar">
-                <section className="researcher-panel">
+                <section className="researcher-panel" id="researcher-affiliations">
                   <h2>Affiliations</h2>
                   {researcher.affiliations.length === 0 ? (
                     <p className="researcher-muted">
@@ -575,7 +601,8 @@ function ResearcherProfile() {
                 </section>
 
                 <section className="researcher-panel researcher-joined">
-                  <h2>On Citeface</h2>
+                  <h2 id="researcher-activity">On Citeface</h2>
+                  <p>{data.pagination.total} {data.pagination.total === 1 ? "published work" : "published works"}</p>
                   <p>{followerCount} {followerCount === 1 ? "follower" : "followers"}</p>
                   <p>
                     Joined{" "}

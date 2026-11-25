@@ -105,6 +105,7 @@
 
 .researcher-heading {
   min-width: 0;
+  flex: 1;
   padding-bottom: 5px;
 }
 
@@ -147,11 +148,39 @@
   font-size: 14px;
 }
 
+.researcher-profile-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 0 0;
+  color: #778195;
+  font-size: 12px;
+}
+
+.researcher-profile-stats a {
+  color: var(--cf-blue-dark);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.researcher-profile-stats a:hover {
+  text-decoration: underline;
+}
+
 .researcher-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  align-items: center;
+  gap: 10px;
   margin: 18px 28px 0 160px;
+}
+
+.researcher-links > a:not(.researcher-edit-profile):not(.researcher-follow-button) {
+  padding: 7px 10px;
+  border: 1px solid #dfe6ef;
+  border-radius: 999px;
+  background: #fff;
 }
 
 .researcher-edit-profile {
@@ -169,6 +198,9 @@
 }
 
 .researcher-follow-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 94px;
   padding: 8px 14px;
   border: 1px solid var(--cf-blue);
@@ -178,6 +210,7 @@
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .researcher-follow-button:disabled {
@@ -197,12 +230,44 @@
   cursor: pointer;
 }
 
+.researcher-section-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-height: 54px;
+  margin-top: 14px;
+  padding: 0 24px;
+  overflow-x: auto;
+  border: 1px solid #e8edf4;
+  border-radius: 12px;
+  background: #fff;
+  scrollbar-width: thin;
+}
+
+.researcher-section-nav a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 54px;
+  border-bottom: 2px solid transparent;
+  color: #596579;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.researcher-section-nav a:hover,
+.researcher-section-nav a:focus-visible {
+  border-bottom-color: var(--cf-blue);
+  color: var(--cf-blue-dark);
+}
+
 .researcher-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   align-items: start;
   gap: 22px;
-  margin-top: 22px;
+  margin-top: 16px;
 }
 
 .researcher-primary,
@@ -214,6 +279,7 @@
 
 .researcher-panel {
   padding: 22px;
+  scroll-margin-top: 20px;
 }
 
 .researcher-panel h2 {
@@ -317,6 +383,12 @@
   border-bottom: 1px solid #edf0f5;
   color: #596579;
   font-size: 12px;
+}
+
+.researcher-joined p + p {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid #edf0f5;
 }
 
 .researcher-affiliation:last-child {
@@ -491,6 +563,11 @@
 
   .researcher-links {
     margin: 16px 18px 0;
+  }
+
+  .researcher-section-nav {
+    gap: 20px;
+    padding: 0 16px;
   }
 
   .researcher-panel {

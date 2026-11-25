@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import CitefaceBrand from "../components/CitefaceBrand";
 import {
@@ -6,6 +6,7 @@ import {
   updateMyCredibilityProfile,
   type CredibilityProfilePayload,
 } from "../services/researchers";
+import { removeProfileImage, uploadProfileImage } from "../services/profile-images";
 import "./credibility-profile.css";
 
 function toComma(value: unknown) {
@@ -112,6 +113,8 @@ export default function CredibilityProfile() {
   const [professionalRanks, setProfessionalRanks] = useState<string[]>([]);
   const [researchInterests, setResearchInterests] = useState<string[]>([]);
   const [researchGoal, setResearchGoal] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -132,6 +135,7 @@ export default function CredibilityProfile() {
           localProfile = null;
         }
         if (profile) {
+          setProfileImageUrl(profile.profileImageUrl ?? null);
           setHeadline(profile.headline ?? "");
           setBiography(profile.biography ?? "");
           setCountry(profile.country ?? "");
@@ -183,6 +187,41 @@ export default function CredibilityProfile() {
     return () => { cancelled = true; };
   }, []);
 
+  async function handleProfileImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+
+    setUploadingImage(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const imageUrl = await uploadProfileImage(file);
+      setProfileImageUrl(imageUrl);
+      setMessage("Your profile photo has been updated.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Unable to upload your profile photo.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function handleRemoveProfileImage() {
+    setUploadingImage(true);
+    setMessage(null);
+    setError(null);
+    try {
+      await removeProfileImage();
+      setProfileImageUrl(null);
+      setMessage("Your profile photo has been removed.");
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Unable to remove your profile photo.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   useEffect(() => {
     if (loading) return;
 
@@ -194,7 +233,7 @@ export default function CredibilityProfile() {
       websiteUrl: websiteUrl.trim(),
       linkedinUrl: linkedinUrl.trim(),
       googleScholarUrl: googleScholarUrl.trim(),
-      orcidId: orcidId.trim(),
+      orcidId: orcidId.trim() || undefined,
       citationCount,
       specializations: specializations.split(",").map((item) => item.trim()).filter(Boolean),
       education: linesToRecords(education, ["institution", "degree", "year"]),
@@ -255,7 +294,7 @@ export default function CredibilityProfile() {
       websiteUrl: websiteUrl.trim(),
       linkedinUrl: linkedinUrl.trim(),
       googleScholarUrl: googleScholarUrl.trim(),
-      orcidId: orcidId.trim(),
+      orcidId: orcidId.trim() || undefined,
       citationCount,
       specializations: specializations.split(",").map((item) => item.trim()).filter(Boolean),
       education: linesToRecords(education, ["institution", "degree", "year"]),
@@ -299,6 +338,43 @@ export default function CredibilityProfile() {
           <form className="credibility-form" onSubmit={handleSave}>
             {error && <p className="credibility-error" role="alert">{error}</p>}
             {message && <p className="credibility-success" role="status">{message}</p>}
+
+            <section className="credibility-section credibility-photo-section">
+              <div className="credibility-photo-preview">
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="Your profile" />
+                ) : (
+                  <span aria-hidden="true">Photo</span>
+                )}
+              </div>
+              <div className="credibility-photo-controls">
+                <h2>Profile photo</h2>
+                <p>Add a clear photo so researchers can recognize you.</p>
+                <div className="credibility-photo-actions">
+                  <label className={`credibility-photo-upload${uploadingImage ? " is-disabled" : ""}`}>
+                    {uploadingImage ? "Uploading..." : "Upload photo"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleProfileImageChange}
+                      disabled={uploadingImage}
+                      aria-label="Upload profile photo"
+                    />
+                  </label>
+                  {profileImageUrl && (
+                    <button
+                      className="credibility-photo-remove"
+                      type="button"
+                      onClick={() => void handleRemoveProfileImage()}
+                      disabled={uploadingImage}
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                  <small>JPEG, PNG or WebP, up to 10 MB.</small>
+                </div>
+              </div>
+            </section>
 
             <section className="credibility-section">
               <h2>Identity and overview</h2>

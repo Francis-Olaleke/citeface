@@ -574,11 +574,19 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
   <div className="topbar-actions">
     {publicView ? (
       user ? (
-        <Link className="signout-button" to="/dashboard">
-          Go to workspace
-        </Link>
+        <>
+          <Link className="signout-button" to="/network">
+            Browse researchers
+          </Link>
+          <Link className="signout-button" to="/dashboard">
+            Go to workspace
+          </Link>
+        </>
       ) : (
         <>
+          <Link className="signout-button" to="/network">
+            Browse researchers
+          </Link>
           <Link className="signout-button" to="/login">
             Sign in
           </Link>
@@ -654,7 +662,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
                 onClick={() => navigate("/network")}
               >
                 <span className="nav-symbol"><NavIcon name="network" /></span>
-                My Network
+                {publicView ? "Researchers" : "My Network"}
               </button>
 
               <button
@@ -858,7 +866,7 @@ const [showStoryComposer, setShowStoryComposer] = useState(false);
             </span>
           </div>
 
-          {!publicView && researcherSpotlights.length > 0 && (
+          {researcherSpotlights.length > 0 && (
             <section
               className="researcher-spotlights"
               aria-labelledby="researcher-spotlights-heading"

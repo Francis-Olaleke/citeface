@@ -68,11 +68,11 @@ export default function ResearcherNetwork() {
   return (
     <div className="network-page">
       <header className="network-topbar">
-        <Link className="citeface-brand-link" to="/dashboard" aria-label="Citeface dashboard">
+        <Link className="citeface-brand-link" to="/" aria-label="Citeface home">
           <CitefaceBrand />
         </Link>
-        <Link className="network-discover-link" to="/dashboard">
-          Back to research
+        <Link className="network-discover-link" to="/">
+          Discover research
         </Link>
       </header>
 
@@ -81,7 +81,7 @@ export default function ResearcherNetwork() {
           <div>
             <span className="network-kicker">CITEFACE NETWORK</span>
             <h1>Discover researchers</h1>
-            <p>Find people publishing ideas and research in the Citeface community.</p>
+            <p>Explore researcher profiles and discover people in the Citeface community.</p>
           </div>
           <span className="network-total">
             {total} {total === 1 ? "researcher" : "researchers"}

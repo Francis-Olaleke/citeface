@@ -94,8 +94,8 @@ function App() {
 
           <Route path="/stories/:slug" element={<StoryDetail />} />
           <Route path="/researchers/:username" element={<ResearcherProfile />} />
+          <Route path="/network" element={<ResearcherNetwork />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/network" element={<ResearcherNetwork />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:conversationId" element={<Messages />} />
             <Route path="/mentorship" element={<Mentorship />} />
